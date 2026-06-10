@@ -29,14 +29,14 @@
         }
         .tab {
             flex: 1;
-            min-width: 100px;
-            padding: 0.9rem;
+            min-width: 80px;
+            padding: 0.85rem 0.4rem;
             background: none;
             border: none;
             color: #a8c5e2;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             transition: all 0.2s;
             white-space: nowrap;
         }
@@ -79,6 +79,7 @@
         .btn.danger { background: #8b0000; }
         .btn.danger:hover { background: #a50000; }
         .btn.small { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
         
         .groups-grid {
             display: grid;
@@ -118,7 +119,6 @@
             padding: 0.2rem;
             font-size: 0.85rem;
         }
-        .score-input:disabled { opacity: 0.5; }
         
         .standings-table {
             width: 100%;
@@ -138,10 +138,6 @@
         .standings-table tr:nth-child(3).advances td { color: #fbbf24; }
         .standings-table tr:nth-child(4) td { color: #f87171; opacity: 0.7; }
         
-        .highlight { background: rgba(255,215,0,0.08); border-left: 3px solid #ffd700; }
-        
-        .bracket { display: flex; flex-direction: column; gap: 1rem; }
-        .round-title { color: #ffd700; font-size: 1rem; margin: 0.5rem 0; }
         .knockout-match {
             display: flex;
             align-items: center;
@@ -154,8 +150,6 @@
         .knockout-team { flex: 1; font-size: 0.85rem; }
         .knockout-team.right { text-align: right; }
         .knockout-score { width: 40px; text-align: center; }
-        .knockout-winner { color: #4ade80; font-weight: 700; }
-        .knockout-loser { opacity: 0.6; }
         .match-label { color: #6b8cae; font-size: 0.75rem; min-width: 60px; }
         
         .draft-grid {
@@ -164,7 +158,6 @@
             gap: 1rem;
         }
         .player-card { background: #111d2e; border-radius: 10px; padding: 1rem; border: 1px solid #1a3a5c; }
-        .player-card h3 { color: #ffd700; margin-bottom: 0.5rem; font-size: 1rem; }
         .player-card input.player-name {
             width: 100%;
             background: #0a1628;
@@ -202,11 +195,7 @@
             text-align: center;
         }
         
-        .leaderboard {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
+        .leaderboard { display: flex; flex-direction: column; gap: 0.5rem; }
         .leader-row {
             display: flex;
             align-items: center;
@@ -230,11 +219,17 @@
         }
         .info-box strong { color: #ffd700; }
         
-        .third-place-standings { margin-top: 1rem; }
+        .sync-bar {
+            background: #0f3460;
+            padding: 0.6rem;
+            text-align: center;
+            border-bottom: 1px solid #1a3a5c;
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
         
-        .hidden { display: none !important; }
-        
-        /* Modal styles */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -255,11 +250,7 @@
             width: 100%;
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
-        .modal-box h3 {
-            color: #ffd700;
-            margin-bottom: 0.8rem;
-            font-size: 1.2rem;
-        }
+        .modal-box h3 { color: #ffd700; margin-bottom: 0.8rem; font-size: 1.2rem; }
         .modal-box textarea {
             width: 100%;
             height: 120px;
@@ -272,33 +263,42 @@
             font-size: 0.8rem;
             resize: vertical;
         }
-        .modal-status {
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            color: #4ade80;
-            min-height: 1.2rem;
-        }
-        .modal-actions {
-            margin-top: 1rem;
+        .modal-status { margin-top: 0.5rem; font-size: 0.8rem; color: #4ade80; min-height: 1.2rem; }
+        .modal-actions { margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end; }
+        
+        .setting-row {
             display: flex;
-            gap: 0.5rem;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid #1a3a5c;
+        }
+        .setting-row label { font-size: 0.9rem; }
+        .setting-row input {
+            width: 60px;
+            text-align: center;
+            background: #0a1628;
+            border: 1px solid #1a5f9e;
+            color: #fff;
+            border-radius: 4px;
+            padding: 0.3rem;
+            font-size: 0.9rem;
         }
         
-        .sync-bar {
-            background: #0f3460;
+        .fetch-status {
             padding: 0.6rem;
-            text-align: center;
-            border-bottom: 1px solid #1a3a5c;
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            display: none;
         }
+        .fetch-status.show { display: block; }
+        .fetch-status.success { background: rgba(74,222,128,0.1); border: 1px solid #4ade80; color: #4ade80; }
+        .fetch-status.error { background: rgba(248,113,113,0.1); border: 1px solid #f87171; color: #f87171; }
+        .fetch-status.info { background: rgba(26,95,158,0.2); border: 1px solid #1a5f9e; color: #a8c5e2; }
         
         @media (max-width: 600px) {
             .groups-grid { grid-template-columns: 1fr; }
-            .match-row { gap: 0.2rem; }
             .team-name { font-size: 0.75rem; }
         }
     </style>
@@ -307,7 +307,7 @@
 
 <header>
     <h1>🏆 2026 FIFA World Cup Tracker</h1>
-    <p>48 Teams • 12 Groups • 4-Player Draft</p>
+    <p>Nick • Howes • Goulet • Parker</p>
 </header>
 
 <div class="tabs">
@@ -315,6 +315,7 @@
     <button class="tab" onclick="showTab('knockout')">Knockout</button>
     <button class="tab" onclick="showTab('draft')">Draft Setup</button>
     <button class="tab" onclick="showTab('scores')">Live Scores</button>
+    <button class="tab" onclick="showTab('settings')">Settings</button>
 </div>
 
 <div class="sync-bar">
@@ -326,15 +327,17 @@
 <div id="groups" class="panel active">
     <div class="info-box">
         <strong>Scoring:</strong> Win = 3 pts, Draw = 1 pt. Top 2 + 8 best 3rd-place teams advance to Round of 32.
-        <br>Enter scores below. Standings update automatically. Use <strong>Export/Import</strong> to share with your league.
+        <br>Enter scores below, or use <strong>Import Scores</strong> to fetch latest results.
     </div>
-    <div style="margin-bottom:1rem;">
+    <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
+        <button class="btn gold" onclick="fetchLatestScores()">🌐 Import Latest Scores</button>
         <button class="btn danger small" onclick="resetGroupStage()">Reset Groups</button>
     </div>
+    <div id="fetchStatus" class="fetch-status"></div>
     <div class="groups-grid" id="groupsContainer"></div>
     
-    <div class="card third-place-standings">
+    <div class="card" style="margin-top:1rem;">
         <h2>🏅 Best Third-Place Teams</h2>
         <p style="color:#a8c5e2;font-size:0.85rem;margin-bottom:0.5rem;">Ranked by points, then goal difference, then goals scored</p>
         <table class="standings-table" id="thirdPlaceTable">
@@ -347,8 +350,7 @@
 <!-- KNOCKOUT -->
 <div id="knockout" class="panel">
     <div class="info-box">
-        <strong>Knockout Stage</strong> — Round of 32 through Final. 
-        Set up the bracket below. Winners auto-advance to the next round.
+        <strong>Knockout Stage</strong> — Round of 32 through Final. Set up the bracket below. Winners auto-advance to the next round.
     </div>
     <div style="margin-bottom:1rem;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
@@ -360,8 +362,7 @@
 <!-- DRAFT -->
 <div id="draft" class="panel">
     <div class="info-box">
-        <strong>Draft Rules:</strong> 4 players × 12 teams = all 48 teams drafted. Each team earns points for its drafter based on results.
-        <br><strong>Points:</strong> Group Win=3, Draw=1. R32=3pts, R16=4pts, QF=5pts, SF=6pts, 3rd Place=7pts, Runner-up=9pts, Champion=15pts.
+        <strong>Draft Rules:</strong> 4 players × 12 teams = all 48 teams drafted.
         <br>Use <strong>Export/Import</strong> to sync across devices.
     </div>
     <div style="margin-bottom:1rem;">
@@ -384,11 +385,36 @@
     </div>
 </div>
 
+<!-- SETTINGS -->
+<div id="settings" class="panel">
+    <div class="card">
+        <h2>⚙️ Scoring System</h2>
+        <p style="color:#a8c5e2;font-size:0.85rem;margin-bottom:0.8rem;">Change any value and it updates instantly across the whole site.</p>
+        
+        <h3 style="color:#ffd700;font-size:0.95rem;margin:1rem 0 0.5rem;">Group Stage</h3>
+        <div class="setting-row"><label>Win</label><input type="number" id="cfgWin" value="3" onchange="updateConfig()"></div>
+        <div class="setting-row"><label>Draw</label><input type="number" id="cfgDraw" value="1" onchange="updateConfig()"></div>
+        
+        <h3 style="color:#ffd700;font-size:0.95rem;margin:1rem 0 0.5rem;">Knockout Bonuses (added to group pts)</h3>
+        <div class="setting-row"><label>Round of 32</label><input type="number" id="cfgR32" value="3" onchange="updateConfig()"></div>
+        <div class="setting-row"><label>Round of 16</label><input type="number" id="cfgR16" value="4" onchange="updateConfig()"></div>
+        <div class="setting-row"><label>Quarterfinal</label><input type="number" id="cfgQF" value="5" onchange="updateConfig()"></div>
+        <div class="setting-row"><label>Semifinal</label><input type="number" id="cfgSF" value="6" onchange="updateConfig()"></div>
+        <div class="setting-row"><label>3rd Place</label><input type="number" id="cfgThird" value="7" onchange="updateConfig()"></div>
+        <div class="setting-row"><label>Runner-up</label><input type="number" id="cfgFinalist" value="9" onchange="updateConfig()"></div>
+        <div class="setting-row"><label>Champion</label><input type="number" id="cfgChamp" value="15" onchange="updateConfig()"></div>
+        
+        <div style="margin-top:1rem;">
+            <button class="btn" onclick="resetConfig()">Reset to Defaults</button>
+        </div>
+    </div>
+</div>
+
 <!-- EXPORT MODAL -->
 <div id="exportModal" class="modal-overlay hidden">
     <div class="modal-box">
         <h3>📋 Export Data</h3>
-        <p style="font-size:0.85rem;color:#a8c5e2;margin-bottom:0.5rem;">Copy this code and send it to your friends. They can paste it using Import.</p>
+        <p style="font-size:0.85rem;color:#a8c5e2;margin-bottom:0.5rem;">Copy this code and send it to your friends.</p>
         <textarea id="exportText" readonly></textarea>
         <div class="modal-status" id="exportStatus"></div>
         <div class="modal-actions">
@@ -415,77 +441,67 @@
 <script>
 // ===== DATA =====
 const ALL_TEAMS = [
-    // Group A
     {name:'Mexico',group:'A'},{name:'South Africa',group:'A'},{name:'South Korea',group:'A'},{name:'Czechia',group:'A'},
-    // Group B
     {name:'Canada',group:'B'},{name:'Bosnia and Herzegovina',group:'B'},{name:'Qatar',group:'B'},{name:'Switzerland',group:'B'},
-    // Group C
     {name:'Brazil',group:'C'},{name:'Morocco',group:'C'},{name:'Haiti',group:'C'},{name:'Scotland',group:'C'},
-    // Group D
     {name:'United States',group:'D'},{name:'Paraguay',group:'D'},{name:'Australia',group:'D'},{name:'Türkiye',group:'D'},
-    // Group E
     {name:'Germany',group:'E'},{name:'Curaçao',group:'E'},{name:'Côte d\'Ivoire',group:'E'},{name:'Ecuador',group:'E'},
-    // Group F
     {name:'Netherlands',group:'F'},{name:'Japan',group:'F'},{name:'Tunisia',group:'F'},{name:'Sweden',group:'F'},
-    // Group G
     {name:'Belgium',group:'G'},{name:'Egypt',group:'G'},{name:'Iran',group:'G'},{name:'New Zealand',group:'G'},
-    // Group H
     {name:'Spain',group:'H'},{name:'Cabo Verde',group:'H'},{name:'Saudi Arabia',group:'H'},{name:'Uruguay',group:'H'},
-    // Group I
     {name:'France',group:'I'},{name:'Senegal',group:'I'},{name:'Norway',group:'I'},{name:'Iraq',group:'I'},
-    // Group J
     {name:'Argentina',group:'J'},{name:'Algeria',group:'J'},{name:'Austria',group:'J'},{name:'Jordan',group:'J'},
-    // Group K
     {name:'Portugal',group:'K'},{name:'Uzbekistan',group:'K'},{name:'Colombia',group:'K'},{name:'Congo DR',group:'K'},
-    // Group L
     {name:'England',group:'L'},{name:'Croatia',group:'L'},{name:'Ghana',group:'L'},{name:'Panama',group:'L'}
 ];
 
 const GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
-function getGroupMatches(group) {
-    const teams = ALL_TEAMS.filter(t => t.group === group);
-    const names = teams.map(t => t.name);
-    return [
-        {id:`${group}1`,home:names[0],away:names[1]},
-        {id:`${group}2`,home:names[2],away:names[3]},
-        {id:`${group}3`,home:names[0],away:names[2]},
-        {id:`${group}4`,home:names[1],away:names[3]},
-        {id:`${group}5`,home:names[0],away:names[3]},
-        {id:`${group}6`,home:names[1],away:names[2]}
-    ];
-}
+const DEFAULT_CONFIG = {
+    win: 3, draw: 1,
+    r32: 3, r16: 4, qf: 5, sf: 6,
+    third: 7, finalist: 9, champion: 15
+};
 
-const KNOCKOUT_ROUNDS = [
-    {name:'Round of 32',matches:16},
-    {name:'Round of 16',matches:8},
-    {name:'Quarterfinals',matches:4},
-    {name:'Semifinals',matches:2},
-    {name:'Final',matches:1},
-    {name:'3rd Place',matches:1}
-];
+const STORAGE_KEY = 'wc2026_tracker_v3';
 
 let state = {
     matches: {},
     draft: [
-        {name:'Player 1',teams:Array(12).fill('')},
-        {name:'Player 2',teams:Array(12).fill('')},
-        {name:'Player 3',teams:Array(12).fill('')},
-        {name:'Player 4',teams:Array(12).fill('')}
+        {name:'Nick',teams:['Spain','Netherlands','Belgium','Egypt','Morocco','Ghana','Scotland','Tunisia','Bosnia and Herzegovina','Haiti','Congo DR','Curaçao']},
+        {name:'Howes',teams:['Portugal','Germany','United States','Japan','Mexico','Türkiye','Austria','Sweden','Australia','Qatar','New Zealand','Cabo Verde']},
+        {name:'Goulet',teams:['France','Argentina','Uruguay','Colombia','Croatia','Switzerland','Canada','Iran','South Africa','Saudi Arabia','Panama','Jordan']},
+        {name:'Parker',teams:['Brazil','England','Norway','Côte d\'Ivoire','Senegal','South Korea','Ecuador','Algeria','Paraguay','Czechia','Iraq','Uzbekistan']}
     ],
-    knockout: {}
+    knockout: {},
+    config: {...DEFAULT_CONFIG}
 };
+
+// ===== NAME MAPPING (openfootball vs our names) =====
+const NAME_MAP = {
+    'Korea Republic': 'South Korea',
+    'Czech Republic': 'Czechia',
+    'Ivory Coast': 'Côte d\'Ivoire',
+    'DR Congo': 'Congo DR',
+    'Turkey': 'Türkiye',
+    'Cape Verde': 'Cabo Verde',
+    'USA': 'United States'
+};
+
+function normalizeName(name) {
+    return NAME_MAP[name] || name;
+}
 
 // ===== INIT =====
 function init() {
     loadData();
+    renderConfig();
     renderGroups();
     renderKnockout();
     renderDraft();
     updateScores();
 }
 
-// ===== TABS =====
 function showTab(id) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -495,15 +511,101 @@ function showTab(id) {
     if(id==='groups') renderGroups();
 }
 
+// ===== CONFIG / SETTINGS =====
+function renderConfig() {
+    document.getElementById('cfgWin').value = state.config.win;
+    document.getElementById('cfgDraw').value = state.config.draw;
+    document.getElementById('cfgR32').value = state.config.r32;
+    document.getElementById('cfgR16').value = state.config.r16;
+    document.getElementById('cfgQF').value = state.config.qf;
+    document.getElementById('cfgSF').value = state.config.sf;
+    document.getElementById('cfgThird').value = state.config.third;
+    document.getElementById('cfgFinalist').value = state.config.finalist;
+    document.getElementById('cfgChamp').value = state.config.champion;
+}
+
+function updateConfig() {
+    state.config.win = parseInt(document.getElementById('cfgWin').value) || 0;
+    state.config.draw = parseInt(document.getElementById('cfgDraw').value) || 0;
+    state.config.r32 = parseInt(document.getElementById('cfgR32').value) || 0;
+    state.config.r16 = parseInt(document.getElementById('cfgR16').value) || 0;
+    state.config.qf = parseInt(document.getElementById('cfgQF').value) || 0;
+    state.config.sf = parseInt(document.getElementById('cfgSF').value) || 0;
+    state.config.third = parseInt(document.getElementById('cfgThird').value) || 0;
+    state.config.finalist = parseInt(document.getElementById('cfgFinalist').value) || 0;
+    state.config.champion = parseInt(document.getElementById('cfgChamp').value) || 0;
+    saveData();
+    renderGroups();
+    updateScores();
+}
+
+function resetConfig() {
+    state.config = {...DEFAULT_CONFIG};
+    renderConfig();
+    saveData();
+    renderGroups();
+    updateScores();
+}
+
+// ===== FETCH SCORES =====
+function showFetch(msg, type) {
+    const el = document.getElementById('fetchStatus');
+    el.textContent = msg;
+    el.className = 'fetch-status show ' + type;
+    setTimeout(() => el.classList.remove('show'), 6000);
+}
+
+async function fetchLatestScores() {
+    showFetch('Fetching latest scores from openfootball...', 'info');
+    try {
+        const res = await fetch('https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        let imported = 0;
+        
+        if (data.matches) {
+            data.matches.forEach(m => {
+                if (!m.score || !m.score.ft) return;
+                const home = normalizeName(m.team1);
+                const away = normalizeName(m.team2);
+                const hScore = m.score.ft[0];
+                const aScore = m.score.ft[1];
+                
+                // Find matching internal match
+                const group = m.group ? m.group.replace('Group ','') : null;
+                if (!group) return;
+                
+                const matches = getGroupMatches(group);
+                const match = matches.find(mm => 
+                    (mm.home === home && mm.away === away) ||
+                    (mm.home === away && mm.away === home) // handle reversed
+                );
+                if (match) {
+                    state.matches[match.id] = {
+                        homeScore: match.home === home ? hScore : aScore,
+                        awayScore: match.home === home ? aScore : hScore
+                    };
+                    imported++;
+                }
+            });
+        }
+        
+        saveData();
+        renderGroups();
+        updateScores();
+        showFetch(`✅ Imported ${imported} match results!`, 'success');
+    } catch (e) {
+        showFetch('❌ Could not fetch: ' + e.message, 'error');
+    }
+}
+
 // ===== EXPORT / IMPORT =====
 function exportData() {
     const payload = btoa(JSON.stringify(state));
     document.getElementById('exportText').value = payload;
     document.getElementById('exportModal').classList.remove('hidden');
     document.getElementById('exportStatus').textContent = 'Copy this code and share it!';
-    setTimeout(() => {
-        document.getElementById('exportText').select();
-    }, 50);
+    setTimeout(() => document.getElementById('exportText').select(), 50);
 }
 
 function hideExport() {
@@ -525,7 +627,6 @@ function showImport() {
     document.getElementById('importModal').classList.remove('hidden');
     document.getElementById('importArea').value = '';
     document.getElementById('importStatus').textContent = '';
-    document.getElementById('importStatus').style.color = '#4ade80';
     setTimeout(() => document.getElementById('importArea').focus(), 50);
 }
 
@@ -537,32 +638,38 @@ function importData() {
     const text = document.getElementById('importArea').value.trim();
     const status = document.getElementById('importStatus');
     if (!text) {
-        status.textContent = 'Please paste a code first.';
-        status.style.color = '#f87171';
-        return;
+        status.textContent = 'Please paste a code first.'; status.style.color = '#f87171'; return;
     }
     try {
-        const decoded = atob(text);
-        const parsed = JSON.parse(decoded);
+        const parsed = JSON.parse(atob(text));
         if (!parsed || typeof parsed !== 'object') throw new Error('Bad format');
         if (!parsed.matches || !parsed.draft || !parsed.knockout) throw new Error('Missing fields');
-        if (!Array.isArray(parsed.draft) || parsed.draft.length !== 4) throw new Error('Invalid draft');
-        
         state = parsed;
+        if (!state.config) state.config = {...DEFAULT_CONFIG};
         saveData();
-        renderGroups();
-        renderKnockout();
-        renderDraft();
-        updateScores();
+        renderConfig();
+        renderGroups(); renderKnockout(); renderDraft(); updateScores();
         hideImport();
-        alert('Data imported successfully! All scores and draft picks loaded.');
+        alert('Data imported successfully!');
     } catch (e) {
-        status.textContent = '❌ Invalid code. Make sure you pasted the full exported text.';
-        status.style.color = '#f87171';
+        status.textContent = '❌ Invalid code.'; status.style.color = '#f87171';
     }
 }
 
 // ===== GROUP STAGE =====
+function getGroupMatches(group) {
+    const teams = ALL_TEAMS.filter(t => t.group === group);
+    const names = teams.map(t => t.name);
+    return [
+        {id:`${group}1`,home:names[0],away:names[1]},
+        {id:`${group}2`,home:names[2],away:names[3]},
+        {id:`${group}3`,home:names[0],away:names[2]},
+        {id:`${group}4`,home:names[1],away:names[3]},
+        {id:`${group}5`,home:names[0],away:names[3]},
+        {id:`${group}6`,home:names[1],away:names[2]}
+    ];
+}
+
 function renderGroups() {
     const container = document.getElementById('groupsContainer');
     container.innerHTML = '';
@@ -573,7 +680,6 @@ function renderGroups() {
         box.className = 'card group-box';
         
         let html = `<h3>Group ${g}</h3>`;
-        
         matches.forEach(m => {
             const res = state.matches[m.id] || {};
             html += `
@@ -598,7 +704,6 @@ function renderGroups() {
         box.innerHTML = html;
         container.appendChild(box);
     });
-    
     renderThirdPlace();
 }
 
@@ -610,9 +715,7 @@ function updateMatch(matchId) {
     } else {
         state.matches[matchId] = { homeScore: parseInt(h), awayScore: parseInt(a) };
     }
-    renderGroups();
-    updateScores();
-    saveData();
+    renderGroups(); updateScores(); saveData();
 }
 
 function calculateGroupStandings(group) {
@@ -631,11 +734,11 @@ function calculateGroupStandings(group) {
         home.p++; away.p++;
         
         if (res.homeScore > res.awayScore) {
-            home.w++; home.pts += 3; away.l++;
+            home.w++; home.pts += state.config.win; away.l++;
         } else if (res.homeScore < res.awayScore) {
-            away.w++; away.pts += 3; home.l++;
+            away.w++; away.pts += state.config.win; home.l++;
         } else {
-            home.d++; away.d++; home.pts++; away.pts++;
+            home.d++; away.d++; home.pts += state.config.draw; away.pts += state.config.draw;
         }
     });
     
@@ -653,12 +756,10 @@ function renderThirdPlace() {
     });
     thirdTeams.sort((a,b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
     
-    let html = '';
-    thirdTeams.forEach((t, i) => {
+    tbody.innerHTML = thirdTeams.map((t, i) => {
         const adv = i < 8 ? '✅' : '❌';
-        html += `<tr><td>${adv} ${t.name}</td><td>${t.group}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf}</td><td>${t.ga}</td><td>${t.gd}</td><td><strong>${t.pts}</strong></td></tr>`;
-    });
-    tbody.innerHTML = html;
+        return `<tr><td>${adv} ${t.name}</td><td>${t.group}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf}</td><td>${t.ga}</td><td>${t.gd}</td><td><strong>${t.pts}</strong></td></tr>`;
+    }).join('');
 }
 
 function getTeamRecord(teamName) {
@@ -671,12 +772,19 @@ function getTeamRecord(teamName) {
 function resetGroupStage() {
     if(!confirm('Clear all group stage results?')) return;
     state.matches = {};
-    saveData();
-    renderGroups();
-    updateScores();
+    saveData(); renderGroups(); updateScores();
 }
 
 // ===== KNOCKOUT =====
+const KNOCKOUT_ROUNDS = [
+    {name:'Round of 32',matches:16},
+    {name:'Round of 16',matches:8},
+    {name:'Quarterfinals',matches:4},
+    {name:'Semifinals',matches:2},
+    {name:'Final',matches:1},
+    {name:'3rd Place',matches:1}
+];
+
 function renderKnockout() {
     const container = document.getElementById('knockoutContainer');
     container.innerHTML = '';
@@ -684,7 +792,6 @@ function renderKnockout() {
     KNOCKOUT_ROUNDS.forEach((round, rIdx) => {
         const div = document.createElement('div');
         div.className = 'card';
-        
         let html = `<h2>${round.name}</h2>`;
         
         for (let mIdx = 0; mIdx < round.matches; mIdx++) {
@@ -708,7 +815,6 @@ function renderKnockout() {
                 </div>
             `;
         }
-        
         div.innerHTML = html;
         container.appendChild(div);
     });
@@ -717,10 +823,8 @@ function renderKnockout() {
 function getPreviousWinners(rIdx, mIdx) {
     if (rIdx === 0) return {};
     const prevRound = rIdx - 1;
-    const match1 = `${prevRound}_${mIdx*2}`;
-    const match2 = `${prevRound}_${mIdx*2+1}`;
-    const res1 = state.knockout[match1];
-    const res2 = state.knockout[match2];
+    const res1 = state.knockout[`${prevRound}_${mIdx*2}`];
+    const res2 = state.knockout[`${prevRound}_${mIdx*2+1}`];
     return {
         home: res1 ? getWinner(res1) : '',
         away: res2 ? getWinner(res2) : ''
@@ -741,17 +845,13 @@ function updateKnockout(key, field, value) {
     } else {
         state.knockout[key][field] = value;
     }
-    saveData();
-    renderKnockout();
-    updateScores();
+    saveData(); renderKnockout(); updateScores();
 }
 
 function resetKnockout() {
     if(!confirm('Clear all knockout results?')) return;
     state.knockout = {};
-    saveData();
-    renderKnockout();
-    updateScores();
+    saveData(); renderKnockout(); updateScores();
 }
 
 // ===== DRAFT =====
@@ -766,9 +866,7 @@ function renderDraft() {
         const card = document.createElement('div');
         card.className = 'player-card';
         
-        let html = `
-            <input class="player-name" value="${player.name}" onchange="updatePlayerName(${pIdx},this.value)" placeholder="Player Name">
-        `;
+        let html = `<input class="player-name" value="${player.name}" onchange="updatePlayerName(${pIdx},this.value)" placeholder="Player Name">`;
         
         for (let i = 0; i < 12; i++) {
             html += `
@@ -781,7 +879,6 @@ function renderDraft() {
                 </div>
             `;
         }
-        
         card.innerHTML = html;
         container.appendChild(card);
     });
@@ -789,32 +886,24 @@ function renderDraft() {
 
 function updatePlayerName(pIdx, name) {
     state.draft[pIdx].name = name;
-    saveData();
-    updateScores();
+    saveData(); updateScores();
 }
 
 function updateDraft(pIdx, slot, teamName) {
     state.draft[pIdx].teams[slot] = teamName;
-    saveData();
-    updateScores();
+    saveData(); updateScores();
 }
 
 function autoDraft() {
     const teams = [...ALL_TEAMS.map(t => t.name)].sort(() => Math.random() - 0.5);
-    state.draft.forEach((p, i) => {
-        p.teams = teams.slice(i*12, (i+1)*12);
-    });
-    saveData();
-    renderDraft();
-    updateScores();
+    state.draft.forEach((p, i) => { p.teams = teams.slice(i*12, (i+1)*12); });
+    saveData(); renderDraft(); updateScores();
 }
 
 function clearDraft() {
     if(!confirm('Clear all draft picks?')) return;
     state.draft.forEach(p => p.teams = Array(12).fill(''));
-    saveData();
-    renderDraft();
-    updateScores();
+    saveData(); renderDraft(); updateScores();
 }
 
 // ===== SCORING =====
@@ -840,7 +929,8 @@ function getTeamPoints(teamName) {
         }
     }
     
-    const bonus = {r32:3, r16:4, qf:5, sf:6, third:7, finalist:9, champion:15};
+    const cfg = state.config;
+    const bonus = {r32:cfg.r32, r16:cfg.r16, qf:cfg.qf, sf:cfg.sf, third:cfg.third, finalist:cfg.finalist, champion:cfg.champion};
     if (bonus[reached]) pts += bonus[reached];
     return pts;
 }
@@ -877,12 +967,7 @@ function updateScores() {
             const grp = rec ? `${rec.pts}pts GD${rec.gd>=0?'+':''}${rec.gd}` : 'Not started';
             return `<div style="display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid #1a3a5c;font-size:0.85rem;"><span>${t}</span><span style="color:#ffd700;">${getTeamPoints(t)}pts <span style="color:#6b8cae;font-size:0.7rem;">${grp}</span></span></div>`;
         }).join('');
-        html += `
-            <div style="background:#0f3460;padding:0.8rem;border-radius:8px;">
-                <strong style="color:#ffd700;">${p.name}</strong>
-                ${teamRows}
-            </div>
-        `;
+        html += `<div style="background:#0f3460;padding:0.8rem;border-radius:8px;"><strong style="color:#ffd700;">${p.name}</strong>${teamRows}</div>`;
     });
     html += '</div>';
     tb.innerHTML = html;
@@ -890,16 +975,17 @@ function updateScores() {
 
 // ===== STORAGE =====
 function saveData() {
-    localStorage.setItem('wc2026_tracker', JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 function loadData() {
-    const saved = localStorage.getItem('wc2026_tracker');
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
         const parsed = JSON.parse(saved);
         state.matches = parsed.matches || {};
         state.draft = parsed.draft || state.draft;
         state.knockout = parsed.knockout || {};
+        state.config = parsed.config || {...DEFAULT_CONFIG};
     }
 }
 
