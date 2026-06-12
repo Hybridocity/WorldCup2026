@@ -98,15 +98,16 @@
         }
         .match-entry {
             border-bottom: 1px solid #1a3a5c;
-            padding: 0.4rem 0;
+            padding: 0.5rem 0;
         }
         .match-entry:last-child { border-bottom: none; }
         .match-meta {
             font-size: 0.72rem;
             color: #6b8cae;
-            padding: 0.15rem 0.6rem 0.25rem;
+            padding: 0.15rem 0.6rem 0.35rem;
             text-align: center;
             letter-spacing: 0.02em;
+            line-height: 1.4;
         }
         .match-row {
             display: flex;
@@ -326,6 +327,7 @@
             .groups-grid { grid-template-columns: 1fr; }
             .team-name { font-size: 0.72rem; }
             .team-initial { font-size: 0.7rem; }
+            .match-meta { font-size: 0.68rem; }
         }
     </style>
 </head>
@@ -490,7 +492,7 @@ const DEFAULT_CONFIG = {
     third: 7, finalist: 9, champion: 15
 };
 
-const STORAGE_KEY = 'wc2026_tracker_v6';
+const STORAGE_KEY = 'wc2026_tracker_v7';
 
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv';
 
@@ -528,7 +530,6 @@ function normalizeName(name) {
     return NAME_MAP[clean] || clean;
 }
 
-// Build drafter lookup
 function getDrafterInitial(teamName) {
     if (!teamName) return '';
     for (let p of state.draft) {
@@ -603,6 +604,22 @@ function showFetch(msg, type) {
     setTimeout(() => el.classList.remove('show'), 6000);
 }
 
+function findColumn(headers, names) {
+    // Try exact match first
+    for (let n of names) {
+        const idx = headers.indexOf(n.toLowerCase().trim());
+        if (idx >= 0) return idx;
+    }
+    // Then try includes match (e.g. "Time (CDT)" matches "time")
+    for (let i = 0; i < headers.length; i++) {
+        const h = headers[i];
+        for (let n of names) {
+            if (h.includes(n.toLowerCase().trim())) return i;
+        }
+    }
+    return -1;
+}
+
 async function fetchGoogleSheet() {
     showFetch('Syncing with Google Sheet...', 'info');
     try {
@@ -613,24 +630,17 @@ async function fetchGoogleSheet() {
         if (rows.length < 2) throw new Error('Sheet appears empty');
         
         const headers = rows[0].map(h => h.toLowerCase().trim());
-        const findCol = names => {
-            for (let n of names) {
-                const idx = headers.indexOf(n.toLowerCase());
-                if (idx >= 0) return idx;
-            }
-            return -1;
-        };
         
-        const colHome = findCol(['home','home team','hometeam','team1','home_team']);
-        const colAway = findCol(['away','away team','awayteam','team2','away_team']);
-        const colHomeScore = findCol(['home score','homescore','hscore','score home','h','home_score']);
-        const colAwayScore = findCol(['away score','awayscore','ascore','score away','a','away_score']);
-        const colDate = findCol(['date','match date','day','match_date']);
-        const colTime = findCol(['time','match time','kickoff','cdt','time cdt','kickoff cdt','match_time']);
-        const colVenue = findCol(['venue','stadium','ground','venue/stadium']);
-        const colCity = findCol(['city','location','host city','host_city']);
+        const colHome = findColumn(headers, ['home','home team','hometeam','team1','home_team']);
+        const colAway = findColumn(headers, ['away','away team','awayteam','team2','away_team']);
+        const colHomeScore = findColumn(headers, ['home score','homescore','hscore','score home','h','home_score']);
+        const colAwayScore = findColumn(headers, ['away score','awayscore','ascore','score away','a','away_score']);
+        const colDate = findColumn(headers, ['date','match date','day','match_date','matchdate']);
+        const colTime = findColumn(headers, ['time','match time','kickoff','cdt','time cdt','kickoff cdt','match_time','matchtime','time (cdt)','kickoff (cdt)']);
+        const colVenue = findColumn(headers, ['venue','stadium','ground','venue/stadium']);
+        const colCity = findColumn(headers, ['city','location','host city','host_city','hostcity']);
         
-        if (colHome < 0 || colAway < 0) throw new Error('Could not find Home/Away columns');
+        if (colHome < 0 || colAway < 0) throw new Error('Could not find Home/Away columns. Headers found: ' + headers.join(', '));
         
         let updatedScores = 0;
         let updatedMeta = 0;
@@ -668,10 +678,10 @@ async function fetchGoogleSheet() {
                 updatedScores++;
             }
             
-            if (colDate >= 0 && row[colDate]) { newMatch.date = row[colDate]; updatedMeta++; }
-            if (colTime >= 0 && row[colTime]) { newMatch.time = row[colTime]; updatedMeta++; }
-            if (colVenue >= 0 && row[colVenue]) { newMatch.venue = row[colVenue]; updatedMeta++; }
-            if (colCity >= 0 && row[colCity]) { newMatch.city = row[colCity]; updatedMeta++; }
+            if (colDate >= 0 && row[colDate]) { newMatch.date = row[colDate].trim(); updatedMeta++; }
+            if (colTime >= 0 && row[colTime]) { newMatch.time = row[colTime].trim(); updatedMeta++; }
+            if (colVenue >= 0 && row[colVenue]) { newMatch.venue = row[colVenue].trim(); updatedMeta++; }
+            if (colCity >= 0 && row[colCity]) { newMatch.city = row[colCity].trim(); updatedMeta++; }
             
             state.matches[found.id] = newMatch;
         }
@@ -810,11 +820,16 @@ function renderGroups() {
             const res = state.matches[m.id] || {};
             
             let metaHtml = '';
-            if (res.date || res.time || res.venue) {
+            if (res.date || res.time || res.venue || res.city) {
                 const parts = [];
                 if (res.date) parts.push(`📅 ${res.date}`);
                 if (res.time) parts.push(`🕐 ${res.time}`);
-                if (res.venue) parts.push(`🏟 ${res.venue}${res.city ? ', ' + res.city : ''}`);
+                if (res.venue || res.city) {
+                    let venueStr = '🏟 ';
+                    if (res.venue) venueStr += res.venue;
+                    if (res.city) venueStr += (res.venue ? ', ' : '') + res.city;
+                    parts.push(venueStr);
+                }
                 metaHtml = `<div class="match-meta">${parts.join(' | ')}</div>`;
             }
             
@@ -836,7 +851,8 @@ function renderGroups() {
         const standings = calculateGroupStandings(g);
         standings.forEach((team, idx) => {
             const cls = idx < 2 ? '' : (idx === 2 ? 'advances' : '');
-            html += `<tr class="${cls}"><td>${team.name} ${getDrafterInitial(team.name) ? '<span class="team-initial">('+getDrafterInitial(team.name)+')</span>' : ''}</td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gf}</td><td>${team.ga}</td><td>${team.gd}</td><td><strong>${team.pts}</strong></td></tr>`;
+            const initial = getDrafterInitial(team.name);
+            html += `<tr class="${cls}"><td>${team.name} ${initial ? '<span class="team-initial">('+initial+')</span>' : ''}</td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gf}</td><td>${team.ga}</td><td>${team.gd}</td><td><strong>${team.pts}</strong></td></tr>`;
         });
         html += '</tbody></table>';
         
@@ -1144,3 +1160,4 @@ init();
 
 </body>
 </html>
+
