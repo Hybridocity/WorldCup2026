@@ -83,7 +83,7 @@
         
         .groups-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             gap: 1rem;
         }
         
@@ -96,18 +96,32 @@
             text-align: center;
             border-bottom: 2px solid #1a5f9e;
         }
+        .match-entry {
+            border-bottom: 1px solid #1a3a5c;
+            padding: 0.4rem 0;
+        }
+        .match-entry:last-child { border-bottom: none; }
+        .match-meta {
+            font-size: 0.72rem;
+            color: #6b8cae;
+            padding: 0.15rem 0.6rem 0.25rem;
+            text-align: center;
+            letter-spacing: 0.02em;
+        }
         .match-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.4rem 0.6rem;
-            border-bottom: 1px solid #1a3a5c;
             gap: 0.3rem;
         }
-        .match-row:last-child { border-bottom: none; }
-        .team-name { flex: 1; font-size: 0.8rem; }
+        .team-name { flex: 1; font-size: 0.78rem; }
         .team-name.home { text-align: right; padding-right: 0.3rem; }
         .team-name.away { text-align: left; padding-left: 0.3rem; }
+        .team-initial {
+            color: #ffd700;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
         .vs { color: #6b8cae; font-size: 0.7rem; min-width: 20px; text-align: center; }
         .score-input {
             width: 36px;
@@ -151,6 +165,16 @@
         .knockout-team.right { text-align: right; }
         .knockout-score { width: 40px; text-align: center; }
         .match-label { color: #6b8cae; font-size: 0.75rem; min-width: 60px; }
+        .draft-badge {
+            background: #111d2e;
+            border: 1px solid #ffd700;
+            color: #ffd700;
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.3rem;
+        }
         
         .draft-grid {
             display: grid;
@@ -300,7 +324,8 @@
         
         @media (max-width: 600px) {
             .groups-grid { grid-template-columns: 1fr; }
-            .team-name { font-size: 0.75rem; }
+            .team-name { font-size: 0.72rem; }
+            .team-initial { font-size: 0.7rem; }
         }
     </style>
 </head>
@@ -322,17 +347,18 @@
 <div class="sync-bar">
     <button class="btn small" onclick="exportData()">📋 Export Data</button>
     <button class="btn small" onclick="showImport()">📥 Import Data</button>
+    <button class="btn small gold" onclick="fetchGoogleSheet()">🔄 Sync Google Sheet</button>
 </div>
 
 <!-- GROUP STAGE -->
 <div id="groups" class="panel active">
     <div class="info-box">
         <strong>Scoring:</strong> Win = <span id="dispWin">3</span> pts, Draw = <span id="dispDraw">1</span> pt. Top 2 + 8 best 3rd-place teams advance.
-        <br>Enter scores below, or use <strong>Import Latest Scores</strong> to fetch results.
+        <br>Letter in parentheses = drafter initial. Scores auto-sync from Google Sheet.
     </div>
     <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
-        <button class="btn gold" onclick="fetchLatestScores()">🌐 Import Latest Scores</button>
+        <button class="btn gold" onclick="fetchGoogleSheet()">🌐 Sync from Google Sheet</button>
         <button class="btn danger small" onclick="resetGroupStage()">Reset Groups</button>
     </div>
     <div id="fetchStatus" class="fetch-status"></div>
@@ -464,7 +490,9 @@ const DEFAULT_CONFIG = {
     third: 7, finalist: 9, champion: 15
 };
 
-const STORAGE_KEY = 'wc2026_tracker_v4';
+const STORAGE_KEY = 'wc2026_tracker_v6';
+
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv';
 
 let state = {
     matches: {},
@@ -480,20 +508,43 @@ let state = {
 
 const NAME_MAP = {
     'Korea Republic': 'South Korea',
+    'Korea DPR': 'South Korea',
     'Czech Republic': 'Czechia',
     'Ivory Coast': 'Côte d\'Ivoire',
     'DR Congo': 'Congo DR',
     'Turkey': 'Türkiye',
     'Cape Verde': 'Cabo Verde',
-    'USA': 'United States'
+    'USA': 'United States',
+    'US': 'United States',
+    'Bosnia Herzegovina': 'Bosnia and Herzegovina',
+    'Bosnia-Herzegovina': 'Bosnia and Herzegovina',
+    'DRC': 'Congo DR',
+    'Democratic Republic of Congo': 'Congo DR'
 };
 
 function normalizeName(name) {
-    return NAME_MAP[name] || name;
+    if (!name) return '';
+    const clean = name.trim();
+    return NAME_MAP[clean] || clean;
+}
+
+// Build drafter lookup
+function getDrafterInitial(teamName) {
+    if (!teamName) return '';
+    for (let p of state.draft) {
+        if (p.teams && p.teams.includes(teamName)) {
+            return p.name ? p.name.charAt(0).toUpperCase() : '';
+        }
+    }
+    return '';
+}
+
+function teamLabel(name) {
+    const initial = getDrafterInitial(name);
+    return initial ? `${name} <span class="team-initial">(${initial})</span>` : name;
 }
 
 function init() {
-    // Hard hide modals on load - safety first
     document.getElementById('exportModal').style.display = 'none';
     document.getElementById('importModal').style.display = 'none';
     
@@ -514,46 +565,37 @@ function showTab(id) {
     if(id==='groups') renderGroups();
 }
 
-// ===== CONFIG / SETTINGS =====
-function renderConfig() {
-    document.getElementById('cfgWin').value = state.config.win;
-    document.getElementById('cfgDraw').value = state.config.draw;
-    document.getElementById('cfgR32').value = state.config.r32;
-    document.getElementById('cfgR16').value = state.config.r16;
-    document.getElementById('cfgQF').value = state.config.qf;
-    document.getElementById('cfgSF').value = state.config.sf;
-    document.getElementById('cfgThird').value = state.config.third;
-    document.getElementById('cfgFinalist').value = state.config.finalist;
-    document.getElementById('cfgChamp').value = state.config.champion;
-    
-    document.getElementById('dispWin').textContent = state.config.win;
-    document.getElementById('dispDraw').textContent = state.config.draw;
+// ===== CSV PARSER =====
+function parseCSV(text) {
+    const rows = [];
+    let inQuotes = false;
+    let row = [];
+    let cell = '';
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i+1];
+        if (inQuotes) {
+            if (char === '"' && next === '"') { cell += '"'; i++; }
+            else if (char === '"') { inQuotes = false; }
+            else { cell += char; }
+        } else {
+            if (char === '"') { inQuotes = true; }
+            else if (char === ',') { row.push(cell.trim()); cell = ''; }
+            else if (char === '\n' || (char === '\r' && next === '\n')) {
+                row.push(cell.trim());
+                if (row.some(c => c !== '')) rows.push(row);
+                row = [];
+                cell = '';
+                if (char === '\r') i++;
+            }
+            else { cell += char; }
+        }
+    }
+    if (cell || row.length) { row.push(cell.trim()); rows.push(row); }
+    return rows;
 }
 
-function updateConfig() {
-    state.config.win = parseInt(document.getElementById('cfgWin').value) || 0;
-    state.config.draw = parseInt(document.getElementById('cfgDraw').value) || 0;
-    state.config.r32 = parseInt(document.getElementById('cfgR32').value) || 0;
-    state.config.r16 = parseInt(document.getElementById('cfgR16').value) || 0;
-    state.config.qf = parseInt(document.getElementById('cfgQF').value) || 0;
-    state.config.sf = parseInt(document.getElementById('cfgSF').value) || 0;
-    state.config.third = parseInt(document.getElementById('cfgThird').value) || 0;
-    state.config.finalist = parseInt(document.getElementById('cfgFinalist').value) || 0;
-    state.config.champion = parseInt(document.getElementById('cfgChamp').value) || 0;
-    saveData();
-    renderGroups();
-    updateScores();
-}
-
-function resetConfig() {
-    state.config = {...DEFAULT_CONFIG};
-    renderConfig();
-    saveData();
-    renderGroups();
-    updateScores();
-}
-
-// ===== FETCH SCORES =====
+// ===== GOOGLE SHEETS SYNC =====
 function showFetch(msg, type) {
     const el = document.getElementById('fetchStatus');
     el.textContent = msg;
@@ -561,46 +603,86 @@ function showFetch(msg, type) {
     setTimeout(() => el.classList.remove('show'), 6000);
 }
 
-async function fetchLatestScores() {
-    showFetch('Fetching latest scores from openfootball...', 'info');
+async function fetchGoogleSheet() {
+    showFetch('Syncing with Google Sheet...', 'info');
     try {
-        const res = await fetch('https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json');
+        const res = await fetch(SHEET_CSV_URL);
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        let imported = 0;
+        const csv = await res.text();
+        const rows = parseCSV(csv);
+        if (rows.length < 2) throw new Error('Sheet appears empty');
         
-        if (data.matches) {
-            data.matches.forEach(m => {
-                if (!m.score || !m.score.ft) return;
-                const home = normalizeName(m.team1);
-                const away = normalizeName(m.team2);
-                const hScore = m.score.ft[0];
-                const aScore = m.score.ft[1];
-                
-                const group = m.group ? m.group.replace('Group ','') : null;
-                if (!group) return;
-                
-                const matches = getGroupMatches(group);
-                const match = matches.find(mm => 
+        const headers = rows[0].map(h => h.toLowerCase().trim());
+        const findCol = names => {
+            for (let n of names) {
+                const idx = headers.indexOf(n.toLowerCase());
+                if (idx >= 0) return idx;
+            }
+            return -1;
+        };
+        
+        const colHome = findCol(['home','home team','hometeam','team1','home_team']);
+        const colAway = findCol(['away','away team','awayteam','team2','away_team']);
+        const colHomeScore = findCol(['home score','homescore','hscore','score home','h','home_score']);
+        const colAwayScore = findCol(['away score','awayscore','ascore','score away','a','away_score']);
+        const colDate = findCol(['date','match date','day','match_date']);
+        const colTime = findCol(['time','match time','kickoff','cdt','time cdt','kickoff cdt','match_time']);
+        const colVenue = findCol(['venue','stadium','ground','venue/stadium']);
+        const colCity = findCol(['city','location','host city','host_city']);
+        
+        if (colHome < 0 || colAway < 0) throw new Error('Could not find Home/Away columns');
+        
+        let updatedScores = 0;
+        let updatedMeta = 0;
+        
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length < Math.max(colHome, colAway) + 1) continue;
+            
+            const home = normalizeName(row[colHome]);
+            const away = normalizeName(row[colAway]);
+            if (!home || !away) continue;
+            
+            let found = null;
+            for (let g of GROUPS) {
+                const matches = getGroupMatches(g);
+                const m = matches.find(mm => 
                     (mm.home === home && mm.away === away) ||
                     (mm.home === away && mm.away === home)
                 );
-                if (match) {
-                    state.matches[match.id] = {
-                        homeScore: match.home === home ? hScore : aScore,
-                        awayScore: match.home === home ? aScore : hScore
-                    };
-                    imported++;
-                }
-            });
+                if (m) { found = m; break; }
+            }
+            if (!found) continue;
+            
+            const hScoreStr = colHomeScore >= 0 ? row[colHomeScore] : '';
+            const aScoreStr = colAwayScore >= 0 ? row[colAwayScore] : '';
+            const hScore = hScoreStr !== '' ? parseInt(hScoreStr) : NaN;
+            const aScore = aScoreStr !== '' ? parseInt(aScoreStr) : NaN;
+            
+            const existing = state.matches[found.id] || {};
+            const newMatch = {...existing};
+            
+            if (!isNaN(hScore) && !isNaN(aScore)) {
+                newMatch.homeScore = hScore;
+                newMatch.awayScore = aScore;
+                updatedScores++;
+            }
+            
+            if (colDate >= 0 && row[colDate]) { newMatch.date = row[colDate]; updatedMeta++; }
+            if (colTime >= 0 && row[colTime]) { newMatch.time = row[colTime]; updatedMeta++; }
+            if (colVenue >= 0 && row[colVenue]) { newMatch.venue = row[colVenue]; updatedMeta++; }
+            if (colCity >= 0 && row[colCity]) { newMatch.city = row[colCity]; updatedMeta++; }
+            
+            state.matches[found.id] = newMatch;
         }
         
         saveData();
         renderGroups();
         updateScores();
-        showFetch(`✅ Imported ${imported} match results!`, 'success');
+        showFetch(`✅ Synced! ${updatedScores} scores + ${updatedMeta} details updated.`, 'success');
     } catch (e) {
-        showFetch('❌ Could not fetch: ' + e.message, 'error');
+        console.error(e);
+        showFetch('❌ Sheet sync failed: ' + e.message, 'error');
     }
 }
 
@@ -660,6 +742,45 @@ function importData() {
     }
 }
 
+// ===== CONFIG / SETTINGS =====
+function renderConfig() {
+    document.getElementById('cfgWin').value = state.config.win;
+    document.getElementById('cfgDraw').value = state.config.draw;
+    document.getElementById('cfgR32').value = state.config.r32;
+    document.getElementById('cfgR16').value = state.config.r16;
+    document.getElementById('cfgQF').value = state.config.qf;
+    document.getElementById('cfgSF').value = state.config.sf;
+    document.getElementById('cfgThird').value = state.config.third;
+    document.getElementById('cfgFinalist').value = state.config.finalist;
+    document.getElementById('cfgChamp').value = state.config.champion;
+    
+    document.getElementById('dispWin').textContent = state.config.win;
+    document.getElementById('dispDraw').textContent = state.config.draw;
+}
+
+function updateConfig() {
+    state.config.win = parseInt(document.getElementById('cfgWin').value) || 0;
+    state.config.draw = parseInt(document.getElementById('cfgDraw').value) || 0;
+    state.config.r32 = parseInt(document.getElementById('cfgR32').value) || 0;
+    state.config.r16 = parseInt(document.getElementById('cfgR16').value) || 0;
+    state.config.qf = parseInt(document.getElementById('cfgQF').value) || 0;
+    state.config.sf = parseInt(document.getElementById('cfgSF').value) || 0;
+    state.config.third = parseInt(document.getElementById('cfgThird').value) || 0;
+    state.config.finalist = parseInt(document.getElementById('cfgFinalist').value) || 0;
+    state.config.champion = parseInt(document.getElementById('cfgChamp').value) || 0;
+    saveData();
+    renderGroups();
+    updateScores();
+}
+
+function resetConfig() {
+    state.config = {...DEFAULT_CONFIG};
+    renderConfig();
+    saveData();
+    renderGroups();
+    updateScores();
+}
+
 // ===== GROUP STAGE =====
 function getGroupMatches(group) {
     const teams = ALL_TEAMS.filter(t => t.group === group);
@@ -684,15 +805,29 @@ function renderGroups() {
         box.className = 'card group-box';
         
         let html = `<h3>Group ${g}</h3>`;
+        
         matches.forEach(m => {
             const res = state.matches[m.id] || {};
+            
+            let metaHtml = '';
+            if (res.date || res.time || res.venue) {
+                const parts = [];
+                if (res.date) parts.push(`📅 ${res.date}`);
+                if (res.time) parts.push(`🕐 ${res.time}`);
+                if (res.venue) parts.push(`🏟 ${res.venue}${res.city ? ', ' + res.city : ''}`);
+                metaHtml = `<div class="match-meta">${parts.join(' | ')}</div>`;
+            }
+            
             html += `
-                <div class="match-row">
-                    <span class="team-name home">${m.home}</span>
-                    <input type="number" min="0" class="score-input" id="${m.id}_h" value="${res.homeScore??''}" onchange="updateMatch('${m.id}')">
-                    <span class="vs">vs</span>
-                    <input type="number" min="0" class="score-input" id="${m.id}_a" value="${res.awayScore??''}" onchange="updateMatch('${m.id}')">
-                    <span class="team-name away">${m.away}</span>
+                <div class="match-entry">
+                    ${metaHtml}
+                    <div class="match-row">
+                        <span class="team-name home">${teamLabel(m.home)}</span>
+                        <input type="number" min="0" class="score-input" id="${m.id}_h" value="${res.homeScore??''}" onchange="updateMatch('${m.id}')">
+                        <span class="vs">vs</span>
+                        <input type="number" min="0" class="score-input" id="${m.id}_a" value="${res.awayScore??''}" onchange="updateMatch('${m.id}')">
+                        <span class="team-name away">${teamLabel(m.away)}</span>
+                    </div>
                 </div>
             `;
         });
@@ -701,7 +836,7 @@ function renderGroups() {
         const standings = calculateGroupStandings(g);
         standings.forEach((team, idx) => {
             const cls = idx < 2 ? '' : (idx === 2 ? 'advances' : '');
-            html += `<tr class="${cls}"><td>${team.name}</td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gf}</td><td>${team.ga}</td><td>${team.gd}</td><td><strong>${team.pts}</strong></td></tr>`;
+            html += `<tr class="${cls}"><td>${team.name} ${getDrafterInitial(team.name) ? '<span class="team-initial">('+getDrafterInitial(team.name)+')</span>' : ''}</td><td>${team.p}</td><td>${team.w}</td><td>${team.d}</td><td>${team.l}</td><td>${team.gf}</td><td>${team.ga}</td><td>${team.gd}</td><td><strong>${team.pts}</strong></td></tr>`;
         });
         html += '</tbody></table>';
         
@@ -717,7 +852,8 @@ function updateMatch(matchId) {
     if (h === '' || a === '') {
         delete state.matches[matchId];
     } else {
-        state.matches[matchId] = { homeScore: parseInt(h), awayScore: parseInt(a) };
+        const existing = state.matches[matchId] || {};
+        state.matches[matchId] = { ...existing, homeScore: parseInt(h), awayScore: parseInt(a) };
     }
     renderGroups(); updateScores(); saveData();
 }
@@ -730,7 +866,7 @@ function calculateGroupStandings(group) {
     
     matches.forEach(m => {
         const res = state.matches[m.id];
-        if (!res) return;
+        if (!res || res.homeScore === undefined || res.awayScore === undefined) return;
         const home = teams.find(t => t.name === m.home);
         const away = teams.find(t => t.name === m.away);
         home.gf += res.homeScore; home.ga += res.awayScore;
@@ -763,7 +899,8 @@ function renderThirdPlace() {
     
     tbody.innerHTML = thirdTeams.map((t, i) => {
         const adv = i < 8 ? '✅' : '❌';
-        return `<tr><td>${adv} ${t.name}</td><td>${t.group}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf}</td><td>${t.ga}</td><td>${t.gd}</td><td><strong>${t.pts}</strong></td></tr>`;
+        const initial = getDrafterInitial(t.name);
+        return `<tr><td>${adv} ${t.name} ${initial ? '<span class="team-initial">('+initial+')</span>' : ''}</td><td>${t.group}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf}</td><td>${t.ga}</td><td>${t.gd}</td><td><strong>${t.pts}</strong></td></tr>`;
     }).join('');
 }
 
@@ -809,14 +946,21 @@ function renderKnockout() {
                 if (prev.away) match.away = prev.away;
             }
             
+            const homeInitial = getDrafterInitial(match.home);
+            const awayInitial = getDrafterInitial(match.away);
+            
             html += `
                 <div class="knockout-match">
                     <span class="match-label">M${key}</span>
-                    <input class="knockout-team right" value="${match.home}" onchange="updateKnockout('${key}','home',this.value)" placeholder="Team">
+                    <div class="knockout-team right">
+                        ${match.home}${homeInitial ? ' <span class="draft-badge">'+homeInitial+'</span>' : ''}
+                    </div>
                     <input type="number" min="0" class="score-input knockout-score" value="${match.homeScore}" onchange="updateKnockout('${key}','homeScore',this.value)">
                     <span class="vs">vs</span>
                     <input type="number" min="0" class="score-input knockout-score" value="${match.awayScore}" onchange="updateKnockout('${key}','awayScore',this.value)">
-                    <input class="knockout-team" value="${match.away}" onchange="updateKnockout('${key}','away',this.value)" placeholder="Team">
+                    <div class="knockout-team">
+                        ${match.away}${awayInitial ? ' <span class="draft-badge">'+awayInitial+'</span>' : ''}
+                    </div>
                 </div>
             `;
         }
