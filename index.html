@@ -322,6 +322,20 @@
         .fetch-status.success { background: rgba(74,222,128,0.1); border: 1px solid #4ade80; color: #4ade80; }
         .fetch-status.error { background: rgba(248,113,113,0.1); border: 1px solid #f87171; color: #f87171; }
         .fetch-status.info { background: rgba(26,95,158,0.2); border: 1px solid #1a5f9e; color: #a8c5e2; }
+        .fetch-status.warn { background: rgba(251,191,36,0.1); border: 1px solid #fbbf24; color: #fbbf24; }
+        
+        .debug-box {
+            background: #0a1628;
+            border: 1px solid #fbbf24;
+            border-radius: 6px;
+            padding: 0.6rem;
+            margin-top: 0.5rem;
+            font-size: 0.78rem;
+            color: #fbbf24;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .debug-box strong { color: #ffd700; }
         
         @media (max-width: 600px) {
             .groups-grid { grid-template-columns: 1fr; }
@@ -364,6 +378,7 @@
         <button class="btn danger small" onclick="resetGroupStage()">Reset Groups</button>
     </div>
     <div id="fetchStatus" class="fetch-status"></div>
+    <div id="debugOutput"></div>
     <div class="groups-grid" id="groupsContainer"></div>
     
     <div class="card" style="margin-top:1rem;">
@@ -492,7 +507,7 @@ const DEFAULT_CONFIG = {
     third: 7, finalist: 9, champion: 15
 };
 
-const STORAGE_KEY = 'wc2026_tracker_v7';
+const STORAGE_KEY = 'wc2026_tracker_v8';
 
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv';
 
@@ -508,6 +523,7 @@ let state = {
     config: {...DEFAULT_CONFIG}
 };
 
+// EXPANDED name map with common misspellings
 const NAME_MAP = {
     'Korea Republic': 'South Korea',
     'Korea DPR': 'South Korea',
@@ -521,12 +537,33 @@ const NAME_MAP = {
     'Bosnia Herzegovina': 'Bosnia and Herzegovina',
     'Bosnia-Herzegovina': 'Bosnia and Herzegovina',
     'DRC': 'Congo DR',
-    'Democratic Republic of Congo': 'Congo DR'
+    'Democratic Republic of Congo': 'Congo DR',
+    'Columbia': 'Colombia',  // Common typo!
+    'Uzbeckistan': 'Uzbekistan',
+    'Uzebekistan': 'Uzbekistan',
+    'Costa Rico': 'Costa Rica',
+    'Morroco': 'Morocco',
+    'Morrocco': 'Morocco',
+    'Saudia Arabia': 'Saudi Arabia',
+    'Saudi Arabi': 'Saudi Arabia',
+    'South Afrika': 'South Africa',
+    'South Africia': 'South Africa',
+    'New Zeeland': 'New Zealand',
+    'Phillipines': 'Philippines', // unlikely but defensive
+    'Czech Republic': 'Czechia',
+    'Czeckia': 'Czechia',
+    'Czeck Republic': 'Czechia',
+    'Domincan Republic': 'Dominican Republic' // unlikely
 };
 
-function normalizeName(name) {
+function cleanName(name) {
     if (!name) return '';
-    const clean = name.trim();
+    // Remove non-breaking spaces, tabs, multiple spaces
+    return name.toString().replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeName(name) {
+    const clean = cleanName(name);
     return NAME_MAP[clean] || clean;
 }
 
@@ -581,10 +618,10 @@ function parseCSV(text) {
             else { cell += char; }
         } else {
             if (char === '"') { inQuotes = true; }
-            else if (char === ',') { row.push(cell.trim()); cell = ''; }
+            else if (char === ',') { row.push(cell); cell = ''; }
             else if (char === '\n' || (char === '\r' && next === '\n')) {
-                row.push(cell.trim());
-                if (row.some(c => c !== '')) rows.push(row);
+                row.push(cell);
+                if (row.some(c => c.trim() !== '')) rows.push(row.map(c => c.trim()));
                 row = [];
                 cell = '';
                 if (char === '\r') i++;
@@ -592,7 +629,7 @@ function parseCSV(text) {
             else { cell += char; }
         }
     }
-    if (cell || row.length) { row.push(cell.trim()); rows.push(row); }
+    if (cell || row.length) { row.push(cell); rows.push(row.map(c => c.trim())); }
     return rows;
 }
 
@@ -601,16 +638,24 @@ function showFetch(msg, type) {
     const el = document.getElementById('fetchStatus');
     el.textContent = msg;
     el.className = 'fetch-status show ' + type;
-    setTimeout(() => el.classList.remove('show'), 6000);
+}
+
+function showDebug(lines) {
+    const el = document.getElementById('debugOutput');
+    if (!lines || lines.length === 0) {
+        el.innerHTML = '';
+        return;
+    }
+    el.innerHTML = '<div class="debug-box"><strong>⚠️ Sheet rows not matched:</strong><br>' + lines.join('<br>') + '</div>';
 }
 
 function findColumn(headers, names) {
-    // Try exact match first
+    // Exact match first
     for (let n of names) {
         const idx = headers.indexOf(n.toLowerCase().trim());
         if (idx >= 0) return idx;
     }
-    // Then try includes match (e.g. "Time (CDT)" matches "time")
+    // Then includes match
     for (let i = 0; i < headers.length; i++) {
         const h = headers[i];
         for (let n of names) {
@@ -622,6 +667,7 @@ function findColumn(headers, names) {
 
 async function fetchGoogleSheet() {
     showFetch('Syncing with Google Sheet...', 'info');
+    showDebug([]);
     try {
         const res = await fetch(SHEET_CSV_URL);
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -640,17 +686,21 @@ async function fetchGoogleSheet() {
         const colVenue = findColumn(headers, ['venue','stadium','ground','venue/stadium']);
         const colCity = findColumn(headers, ['city','location','host city','host_city','hostcity']);
         
-        if (colHome < 0 || colAway < 0) throw new Error('Could not find Home/Away columns. Headers found: ' + headers.join(', '));
+        if (colHome < 0 || colAway < 0) throw new Error('Could not find Home/Away columns. Headers: ' + headers.join(', '));
         
         let updatedScores = 0;
         let updatedMeta = 0;
+        const unmatched = [];
         
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (!row || row.length < Math.max(colHome, colAway) + 1) continue;
             
-            const home = normalizeName(row[colHome]);
-            const away = normalizeName(row[colAway]);
+            const homeRaw = cleanName(row[colHome]);
+            const awayRaw = cleanName(row[colAway]);
+            const home = normalizeName(homeRaw);
+            const away = normalizeName(awayRaw);
+            
             if (!home || !away) continue;
             
             let found = null;
@@ -662,10 +712,14 @@ async function fetchGoogleSheet() {
                 );
                 if (m) { found = m; break; }
             }
-            if (!found) continue;
             
-            const hScoreStr = colHomeScore >= 0 ? row[colHomeScore] : '';
-            const aScoreStr = colAwayScore >= 0 ? row[colAwayScore] : '';
+            if (!found) {
+                unmatched.push(`Row ${i+1}: "${homeRaw}" vs "${awayRaw}" → normalized: "${home}" vs "${away}"`);
+                continue;
+            }
+            
+            const hScoreStr = colHomeScore >= 0 ? cleanName(row[colHomeScore]) : '';
+            const aScoreStr = colAwayScore >= 0 ? cleanName(row[colAwayScore]) : '';
             const hScore = hScoreStr !== '' ? parseInt(hScoreStr) : NaN;
             const aScore = aScoreStr !== '' ? parseInt(aScoreStr) : NaN;
             
@@ -673,15 +727,21 @@ async function fetchGoogleSheet() {
             const newMatch = {...existing};
             
             if (!isNaN(hScore) && !isNaN(aScore)) {
-                newMatch.homeScore = hScore;
-                newMatch.awayScore = aScore;
+                // Orient scores correctly based on our internal home/away
+                if (found.home === home) {
+                    newMatch.homeScore = hScore;
+                    newMatch.awayScore = aScore;
+                } else {
+                    newMatch.homeScore = aScore;
+                    newMatch.awayScore = hScore;
+                }
                 updatedScores++;
             }
             
-            if (colDate >= 0 && row[colDate]) { newMatch.date = row[colDate].trim(); updatedMeta++; }
-            if (colTime >= 0 && row[colTime]) { newMatch.time = row[colTime].trim(); updatedMeta++; }
-            if (colVenue >= 0 && row[colVenue]) { newMatch.venue = row[colVenue].trim(); updatedMeta++; }
-            if (colCity >= 0 && row[colCity]) { newMatch.city = row[colCity].trim(); updatedMeta++; }
+            if (colDate >= 0 && row[colDate]) { newMatch.date = cleanName(row[colDate]); updatedMeta++; }
+            if (colTime >= 0 && row[colTime]) { newMatch.time = cleanName(row[colTime]); updatedMeta++; }
+            if (colVenue >= 0 && row[colVenue]) { newMatch.venue = cleanName(row[colVenue]); updatedMeta++; }
+            if (colCity >= 0 && row[colCity]) { newMatch.city = cleanName(row[colCity]); updatedMeta++; }
             
             state.matches[found.id] = newMatch;
         }
@@ -689,7 +749,16 @@ async function fetchGoogleSheet() {
         saveData();
         renderGroups();
         updateScores();
-        showFetch(`✅ Synced! ${updatedScores} scores + ${updatedMeta} details updated.`, 'success');
+        
+        let msg = `✅ Synced! ${updatedScores} scores + ${updatedMeta} details updated.`;
+        let type = 'success';
+        if (unmatched.length > 0) {
+            msg += ` ⚠️ ${unmatched.length} row(s) not matched.`;
+            type = 'warn';
+            showDebug(unmatched.slice(0, 8)); // Show first 8
+            console.log('Unmatched sheet rows:', unmatched);
+        }
+        showFetch(msg, type);
     } catch (e) {
         console.error(e);
         showFetch('❌ Sheet sync failed: ' + e.message, 'error');
@@ -1160,4 +1229,3 @@ init();
 
 </body>
 </html>
-
