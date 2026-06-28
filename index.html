@@ -29,21 +29,21 @@
         }
         .tab {
             flex: 1;
-            min-width: 80px;
-            padding: 0.85rem 0.4rem;
+            min-width: 70px;
+            padding: 0.85rem 0.3rem;
             background: none;
             border: none;
             color: #a8c5e2;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             transition: all 0.2s;
             white-space: nowrap;
         }
         .tab:hover { background: rgba(255,255,255,0.05); color: #fff; }
         .tab.active { background: #1a5f9e; color: #fff; border-bottom: 3px solid #ffd700; }
         
-        .panel { display: none; padding: 1rem; max-width: 1200px; margin: 0 auto; }
+        .panel { display: none; padding: 1rem; max-width: 1400px; margin: 0 auto; }
         .panel.active { display: block; }
         
         .card {
@@ -329,7 +329,7 @@
             border: 1px solid #fbbf24;
             border-radius: 6px;
             padding: 0.6rem;
-            margin-top: 0.5rem;
+            margin-bottom: 1rem;
             font-size: 0.78rem;
             color: #fbbf24;
             max-height: 120px;
@@ -337,11 +337,97 @@
         }
         .debug-box strong { color: #ffd700; }
         
+        /* BRACKET STYLES */
+        .bracket-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 1rem;
+            padding: 0.5rem 0;
+            align-items: stretch;
+        }
+        .bracket-round {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            min-width: 190px;
+            flex: 1;
+        }
+        .bracket-round-title {
+            text-align: center;
+            color: #ffd700;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 0.6rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 2px solid #1a5f9e;
+        }
+        .bracket-match {
+            background: #0f3460;
+            border-radius: 8px;
+            padding: 0.6rem;
+            margin: 0.3rem 0;
+            border-left: 3px solid #1a5f9e;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: border-color 0.2s;
+        }
+        .bracket-match.complete {
+            border-left-color: #4ade80;
+        }
+        .bracket-teams {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .bracket-team {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.82rem;
+            padding: 0.1rem 0;
+        }
+        .bracket-team.winner {
+            color: #4ade80;
+            font-weight: 700;
+        }
+        .bracket-team.empty {
+            color: #6b8cae;
+            font-style: italic;
+        }
+        .bracket-score {
+            font-weight: 700;
+            color: #ffd700;
+            font-size: 0.95rem;
+            min-width: 22px;
+            text-align: right;
+        }
+        .bracket-meta {
+            font-size: 0.7rem;
+            color: #6b8cae;
+            margin-top: 0.4rem;
+            text-align: center;
+            border-top: 1px solid #1a3a5c;
+            padding-top: 0.35rem;
+            line-height: 1.3;
+        }
+        .bracket-connector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffd700;
+            font-size: 1.2rem;
+            min-width: 20px;
+        }
+        
         @media (max-width: 600px) {
             .groups-grid { grid-template-columns: 1fr; }
             .team-name { font-size: 0.72rem; }
             .team-initial { font-size: 0.7rem; }
             .match-meta { font-size: 0.68rem; }
+            .bracket-container { gap: 0.5rem; }
+            .bracket-round { min-width: 160px; }
+            .bracket-team { font-size: 0.75rem; }
         }
     </style>
 </head>
@@ -355,6 +441,7 @@
 <div class="tabs">
     <button class="tab active" onclick="showTab('groups')">Group Stage</button>
     <button class="tab" onclick="showTab('knockout')">Knockout</button>
+    <button class="tab" onclick="showTab('bracket')">Bracket</button>
     <button class="tab" onclick="showTab('draft')">Draft Setup</button>
     <button class="tab" onclick="showTab('scores')">Live Scores</button>
     <button class="tab" onclick="showTab('settings')">Settings</button>
@@ -363,7 +450,8 @@
 <div class="sync-bar">
     <button class="btn small" onclick="exportData()">📋 Export Data</button>
     <button class="btn small" onclick="showImport()">📥 Import Data</button>
-    <button class="btn small gold" onclick="fetchGoogleSheet()">🔄 Sync Google Sheet</button>
+    <button class="btn small gold" onclick="fetchGoogleSheet()">🔄 Sync Groups</button>
+    <button class="btn small gold" onclick="fetchKnockoutSheet()">🔄 Sync Knockouts</button>
 </div>
 
 <!-- GROUP STAGE -->
@@ -374,7 +462,7 @@
     </div>
     <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
-        <button class="btn gold" onclick="fetchGoogleSheet()">🌐 Sync from Google Sheet</button>
+        <button class="btn gold" onclick="fetchGoogleSheet()">🌐 Sync Group Stage Sheet</button>
         <button class="btn danger small" onclick="resetGroupStage()">Reset Groups</button>
     </div>
     <div id="fetchStatus" class="fetch-status"></div>
@@ -394,13 +482,29 @@
 <!-- KNOCKOUT -->
 <div id="knockout" class="panel">
     <div class="info-box">
-        <strong>Knockout Stage</strong> — Round of 32 through Final. Set up the bracket below. Winners auto-advance.
+        <strong>Knockout Stage</strong> — Enter scores below or sync from the Knockouts sheet tab. Winners auto-advance to the next round.
     </div>
-    <div style="margin-bottom:1rem;">
+    <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
+        <button class="btn gold" onclick="fetchKnockoutSheet()">🌐 Sync Knockouts Sheet</button>
         <button class="btn danger small" onclick="resetKnockout()">Reset Bracket</button>
     </div>
+    <div id="knockoutFetchStatus" class="fetch-status"></div>
     <div id="knockoutContainer"></div>
+</div>
+
+<!-- BRACKET -->
+<div id="bracket" class="panel">
+    <div class="info-box">
+        <strong>Knockout Bracket</strong> — Left to right shows progression from Round of 32 through the Final.
+        <br>Green border = match complete. Gold initials = drafter.
+    </div>
+    <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button class="btn" onclick="saveData()">💾 Save Progress</button>
+        <button class="btn gold" onclick="fetchKnockoutSheet()">🌐 Sync Knockouts Sheet</button>
+    </div>
+    <div id="bracketFetchStatus" class="fetch-status"></div>
+    <div class="bracket-container" id="bracketContainer"></div>
 </div>
 
 <!-- DRAFT -->
@@ -507,9 +611,10 @@ const DEFAULT_CONFIG = {
     third: 7, finalist: 9, champion: 15
 };
 
-const STORAGE_KEY = 'wc2026_tracker_v8';
+const STORAGE_KEY = 'wc2026_tracker_v9';
 
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv';
+const SHEET_KNOCKOUT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv&sheet=Knockouts';
 
 let state = {
     matches: {},
@@ -523,7 +628,6 @@ let state = {
     config: {...DEFAULT_CONFIG}
 };
 
-// EXPANDED name map with common misspellings
 const NAME_MAP = {
     'Korea Republic': 'South Korea',
     'Korea DPR': 'South Korea',
@@ -538,7 +642,7 @@ const NAME_MAP = {
     'Bosnia-Herzegovina': 'Bosnia and Herzegovina',
     'DRC': 'Congo DR',
     'Democratic Republic of Congo': 'Congo DR',
-    'Columbia': 'Colombia',  // Common typo!
+    'Columbia': 'Colombia',
     'Uzbeckistan': 'Uzbekistan',
     'Uzebekistan': 'Uzbekistan',
     'Costa Rico': 'Costa Rica',
@@ -549,16 +653,13 @@ const NAME_MAP = {
     'South Afrika': 'South Africa',
     'South Africia': 'South Africa',
     'New Zeeland': 'New Zealand',
-    'Phillipines': 'Philippines', // unlikely but defensive
-    'Czech Republic': 'Czechia',
     'Czeckia': 'Czechia',
     'Czeck Republic': 'Czechia',
-    'Domincan Republic': 'Dominican Republic' // unlikely
+    'Domincan Republic': 'Dominican Republic'
 };
 
 function cleanName(name) {
     if (!name) return '';
-    // Remove non-breaking spaces, tabs, multiple spaces
     return name.toString().replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
@@ -590,6 +691,7 @@ function init() {
     renderConfig();
     renderGroups();
     renderKnockout();
+    renderBracket();
     renderDraft();
     updateScores();
 }
@@ -601,6 +703,8 @@ function showTab(id) {
     event.target.classList.add('active');
     if(id==='scores') updateScores();
     if(id==='groups') renderGroups();
+    if(id==='bracket') renderBracket();
+    if(id==='knockout') renderKnockout();
 }
 
 // ===== CSV PARSER =====
@@ -633,29 +737,12 @@ function parseCSV(text) {
     return rows;
 }
 
-// ===== GOOGLE SHEETS SYNC =====
-function showFetch(msg, type) {
-    const el = document.getElementById('fetchStatus');
-    el.textContent = msg;
-    el.className = 'fetch-status show ' + type;
-}
-
-function showDebug(lines) {
-    const el = document.getElementById('debugOutput');
-    if (!lines || lines.length === 0) {
-        el.innerHTML = '';
-        return;
-    }
-    el.innerHTML = '<div class="debug-box"><strong>⚠️ Sheet rows not matched:</strong><br>' + lines.join('<br>') + '</div>';
-}
-
+// ===== COLUMN FINDER =====
 function findColumn(headers, names) {
-    // Exact match first
     for (let n of names) {
         const idx = headers.indexOf(n.toLowerCase().trim());
         if (idx >= 0) return idx;
     }
-    // Then includes match
     for (let i = 0; i < headers.length; i++) {
         const h = headers[i];
         for (let n of names) {
@@ -665,8 +752,25 @@ function findColumn(headers, names) {
     return -1;
 }
 
+// ===== STATUS HELPERS =====
+function showFetch(elId, msg, type) {
+    const el = document.getElementById(elId);
+    el.textContent = msg;
+    el.className = 'fetch-status show ' + type;
+    if (type !== 'error' && type !== 'warn') {
+        setTimeout(() => el.classList.remove('show'), 6000);
+    }
+}
+
+function showDebug(lines) {
+    const el = document.getElementById('debugOutput');
+    if (!lines || lines.length === 0) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="debug-box"><strong>⚠️ Sheet rows not matched:</strong><br>' + lines.join('<br>') + '</div>';
+}
+
+// ===== GROUP SHEET SYNC =====
 async function fetchGoogleSheet() {
-    showFetch('Syncing with Google Sheet...', 'info');
+    showFetch('fetchStatus', 'Syncing group stage...', 'info');
     showDebug([]);
     try {
         const res = await fetch(SHEET_CSV_URL);
@@ -676,7 +780,6 @@ async function fetchGoogleSheet() {
         if (rows.length < 2) throw new Error('Sheet appears empty');
         
         const headers = rows[0].map(h => h.toLowerCase().trim());
-        
         const colHome = findColumn(headers, ['home','home team','hometeam','team1','home_team']);
         const colAway = findColumn(headers, ['away','away team','awayteam','team2','away_team']);
         const colHomeScore = findColumn(headers, ['home score','homescore','hscore','score home','h','home_score']);
@@ -688,35 +791,24 @@ async function fetchGoogleSheet() {
         
         if (colHome < 0 || colAway < 0) throw new Error('Could not find Home/Away columns. Headers: ' + headers.join(', '));
         
-        let updatedScores = 0;
-        let updatedMeta = 0;
+        let updatedScores = 0, updatedMeta = 0;
         const unmatched = [];
         
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (!row || row.length < Math.max(colHome, colAway) + 1) continue;
             
-            const homeRaw = cleanName(row[colHome]);
-            const awayRaw = cleanName(row[colAway]);
-            const home = normalizeName(homeRaw);
-            const away = normalizeName(awayRaw);
-            
+            const home = normalizeName(row[colHome]);
+            const away = normalizeName(row[colAway]);
             if (!home || !away) continue;
             
             let found = null;
             for (let g of GROUPS) {
                 const matches = getGroupMatches(g);
-                const m = matches.find(mm => 
-                    (mm.home === home && mm.away === away) ||
-                    (mm.home === away && mm.away === home)
-                );
+                const m = matches.find(mm => (mm.home === home && mm.away === away) || (mm.home === away && mm.away === home));
                 if (m) { found = m; break; }
             }
-            
-            if (!found) {
-                unmatched.push(`Row ${i+1}: "${homeRaw}" vs "${awayRaw}" → normalized: "${home}" vs "${away}"`);
-                continue;
-            }
+            if (!found) { unmatched.push(`Row ${i+1}: "${home}" vs "${away}"`); continue; }
             
             const hScoreStr = colHomeScore >= 0 ? cleanName(row[colHomeScore]) : '';
             const aScoreStr = colAwayScore >= 0 ? cleanName(row[colAwayScore]) : '';
@@ -727,17 +819,10 @@ async function fetchGoogleSheet() {
             const newMatch = {...existing};
             
             if (!isNaN(hScore) && !isNaN(aScore)) {
-                // Orient scores correctly based on our internal home/away
-                if (found.home === home) {
-                    newMatch.homeScore = hScore;
-                    newMatch.awayScore = aScore;
-                } else {
-                    newMatch.homeScore = aScore;
-                    newMatch.awayScore = hScore;
-                }
+                if (found.home === home) { newMatch.homeScore = hScore; newMatch.awayScore = aScore; }
+                else { newMatch.homeScore = aScore; newMatch.awayScore = hScore; }
                 updatedScores++;
             }
-            
             if (colDate >= 0 && row[colDate]) { newMatch.date = cleanName(row[colDate]); updatedMeta++; }
             if (colTime >= 0 && row[colTime]) { newMatch.time = cleanName(row[colTime]); updatedMeta++; }
             if (colVenue >= 0 && row[colVenue]) { newMatch.venue = cleanName(row[colVenue]); updatedMeta++; }
@@ -749,19 +834,106 @@ async function fetchGoogleSheet() {
         saveData();
         renderGroups();
         updateScores();
-        
-        let msg = `✅ Synced! ${updatedScores} scores + ${updatedMeta} details updated.`;
+        let msg = `✅ Group stage synced! ${updatedScores} scores + ${updatedMeta} details.`;
         let type = 'success';
-        if (unmatched.length > 0) {
-            msg += ` ⚠️ ${unmatched.length} row(s) not matched.`;
-            type = 'warn';
-            showDebug(unmatched.slice(0, 8)); // Show first 8
-            console.log('Unmatched sheet rows:', unmatched);
-        }
-        showFetch(msg, type);
+        if (unmatched.length > 0) { msg += ` ⚠️ ${unmatched.length} unmatched.`; type = 'warn'; showDebug(unmatched.slice(0, 8)); console.log('Unmatched:', unmatched); }
+        showFetch('fetchStatus', msg, type);
     } catch (e) {
         console.error(e);
-        showFetch('❌ Sheet sync failed: ' + e.message, 'error');
+        showFetch('fetchStatus', '❌ Sync failed: ' + e.message, 'error');
+    }
+}
+
+// ===== KNOCKOUT SHEET SYNC =====
+function mapRoundToIndex(roundName) {
+    const r = roundName.toLowerCase().trim();
+    if (r.includes('32') || r === 'r32') return 0;
+    if (r.includes('16') || r === 'r16') return 1;
+    if (r.includes('quarter') || r === 'qf') return 2;
+    if (r.includes('semi') || r === 'sf') return 3;
+    if (r.includes('final') && !r.includes('3rd') && !r.includes('third')) return 4;
+    if (r.includes('3rd') || r.includes('third')) return 5;
+    return null;
+}
+
+async function fetchKnockoutSheet() {
+    showFetch('knockoutFetchStatus', 'Syncing knockouts...', 'info');
+    showFetch('bracketFetchStatus', 'Syncing knockouts...', 'info');
+    try {
+        const res = await fetch(SHEET_KNOCKOUT_URL);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const csv = await res.text();
+        const rows = parseCSV(csv);
+        if (rows.length < 2) throw new Error('Sheet appears empty');
+        
+        const headers = rows[0].map(h => h.toLowerCase().trim());
+        const colHome = findColumn(headers, ['home','home team','hometeam','team1','home_team']);
+        const colAway = findColumn(headers, ['away','away team','awayteam','team2','away_team']);
+        const colHomeScore = findColumn(headers, ['home score','homescore','hscore','score home','h','home_score']);
+        const colAwayScore = findColumn(headers, ['away score','awayscore','ascore','score away','a','away_score']);
+        const colDate = findColumn(headers, ['date','match date','day','match_date','matchdate']);
+        const colTime = findColumn(headers, ['time','match time','kickoff','cdt','time cdt','kickoff cdt','match_time','matchtime','time (cdt)','kickoff (cdt)']);
+        const colVenue = findColumn(headers, ['venue','stadium','ground','venue/stadium']);
+        const colCity = findColumn(headers, ['city','location','host city','host_city','hostcity']);
+        const colRound = findColumn(headers, ['round','stage','knockout round','round of']);
+        
+        if (colHome < 0 || colAway < 0 || colRound < 0) throw new Error('Could not find Home/Away/Round columns. Headers: ' + headers.join(', '));
+        
+        const roundCounters = {};
+        let updatedScores = 0, updatedMeta = 0;
+        const unmatched = [];
+        
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length < Math.max(colHome, colAway, colRound) + 1) continue;
+            
+            const home = normalizeName(row[colHome]);
+            const away = normalizeName(row[colAway]);
+            const roundRaw = cleanName(row[colRound]);
+            if (!home || !away || !roundRaw) continue;
+            
+            const roundIndex = mapRoundToIndex(roundRaw);
+            if (roundIndex === null) { unmatched.push(`Row ${i+1}: unknown round "${roundRaw}"`); continue; }
+            
+            if (roundCounters[roundIndex] === undefined) roundCounters[roundIndex] = 0;
+            const matchIndex = roundCounters[roundIndex]++;
+            const key = `${roundIndex}_${matchIndex}`;
+            
+            const hScoreStr = colHomeScore >= 0 ? cleanName(row[colHomeScore]) : '';
+            const aScoreStr = colAwayScore >= 0 ? cleanName(row[colAwayScore]) : '';
+            const hScore = hScoreStr !== '' ? parseInt(hScoreStr) : NaN;
+            const aScore = aScoreStr !== '' ? parseInt(aScoreStr) : NaN;
+            
+            const existing = state.knockout[key] || {};
+            const newMatch = {...existing, home, away};
+            
+            if (!isNaN(hScore) && !isNaN(aScore)) {
+                newMatch.homeScore = hScore;
+                newMatch.awayScore = aScore;
+                updatedScores++;
+            }
+            if (colDate >= 0 && row[colDate]) { newMatch.date = cleanName(row[colDate]); updatedMeta++; }
+            if (colTime >= 0 && row[colTime]) { newMatch.time = cleanName(row[colTime]); updatedMeta++; }
+            if (colVenue >= 0 && row[colVenue]) { newMatch.venue = cleanName(row[colVenue]); updatedMeta++; }
+            if (colCity >= 0 && row[colCity]) { newMatch.city = cleanName(row[colCity]); updatedMeta++; }
+            
+            state.knockout[key] = newMatch;
+        }
+        
+        saveData();
+        renderKnockout();
+        renderBracket();
+        updateScores();
+        
+        let msg = `✅ Knockouts synced! ${updatedScores} scores + ${updatedMeta} details.`;
+        let type = 'success';
+        if (unmatched.length > 0) { msg += ` ⚠️ ${unmatched.length} issue(s).`; type = 'warn'; console.log('Knockout issues:', unmatched); }
+        showFetch('knockoutFetchStatus', msg, type);
+        showFetch('bracketFetchStatus', msg, type);
+    } catch (e) {
+        console.error(e);
+        showFetch('knockoutFetchStatus', '❌ Knockout sync failed: ' + e.message, 'error');
+        showFetch('bracketFetchStatus', '❌ Knockout sync failed: ' + e.message, 'error');
     }
 }
 
@@ -802,9 +974,7 @@ function hideImport() {
 function importData() {
     const text = document.getElementById('importArea').value.trim();
     const status = document.getElementById('importStatus');
-    if (!text) {
-        status.textContent = 'Please paste a code first.'; status.style.color = '#f87171'; return;
-    }
+    if (!text) { status.textContent = 'Please paste a code first.'; status.style.color = '#f87171'; return; }
     try {
         const parsed = JSON.parse(atob(text));
         if (!parsed || typeof parsed !== 'object') throw new Error('Bad format');
@@ -813,7 +983,7 @@ function importData() {
         if (!state.config) state.config = {...DEFAULT_CONFIG};
         saveData();
         renderConfig();
-        renderGroups(); renderKnockout(); renderDraft(); updateScores();
+        renderGroups(); renderKnockout(); renderBracket(); renderDraft(); updateScores();
         hideImport();
         alert('Data imported successfully!');
     } catch (e) {
@@ -884,24 +1054,21 @@ function renderGroups() {
         box.className = 'card group-box';
         
         let html = `<h3>Group ${g}</h3>`;
-        
         matches.forEach(m => {
             const res = state.matches[m.id] || {};
-            
             let metaHtml = '';
             if (res.date || res.time || res.venue || res.city) {
                 const parts = [];
                 if (res.date) parts.push(`📅 ${res.date}`);
                 if (res.time) parts.push(`🕐 ${res.time}`);
                 if (res.venue || res.city) {
-                    let venueStr = '🏟 ';
-                    if (res.venue) venueStr += res.venue;
-                    if (res.city) venueStr += (res.venue ? ', ' : '') + res.city;
-                    parts.push(venueStr);
+                    let v = '🏟 ';
+                    if (res.venue) v += res.venue;
+                    if (res.city) v += (res.venue ? ', ' : '') + res.city;
+                    parts.push(v);
                 }
                 metaHtml = `<div class="match-meta">${parts.join(' | ')}</div>`;
             }
-            
             html += `
                 <div class="match-entry">
                     ${metaHtml}
@@ -912,8 +1079,7 @@ function renderGroups() {
                         <input type="number" min="0" class="score-input" id="${m.id}_a" value="${res.awayScore??''}" onchange="updateMatch('${m.id}')">
                         <span class="team-name away">${teamLabel(m.away)}</span>
                     </div>
-                </div>
-            `;
+                </div>`;
         });
         
         html += `<table class="standings-table"><thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>`;
@@ -959,13 +1125,9 @@ function calculateGroupStandings(group) {
         home.p++; away.p++;
         
         const cfg = state.config;
-        if (res.homeScore > res.awayScore) {
-            home.w++; home.pts += cfg.win; away.l++;
-        } else if (res.homeScore < res.awayScore) {
-            away.w++; away.pts += cfg.win; home.l++;
-        } else {
-            home.d++; away.d++; home.pts += cfg.draw; away.pts += cfg.draw;
-        }
+        if (res.homeScore > res.awayScore) { home.w++; home.pts += cfg.win; away.l++; }
+        else if (res.homeScore < res.awayScore) { away.w++; away.pts += cfg.win; home.l++; }
+        else { home.d++; away.d++; home.pts += cfg.draw; away.pts += cfg.draw; }
     });
     
     teams.forEach(t => t.gd = t.gf - t.ga);
@@ -1034,19 +1196,35 @@ function renderKnockout() {
             const homeInitial = getDrafterInitial(match.home);
             const awayInitial = getDrafterInitial(match.away);
             
+            // Match details from sheet if available
+            let metaHtml = '';
+            if (match.date || match.time || match.venue) {
+                const parts = [];
+                if (match.date) parts.push(`📅 ${match.date}`);
+                if (match.time) parts.push(`🕐 ${match.time}`);
+                if (match.venue || match.city) {
+                    let v = '🏟 ';
+                    if (match.venue) v += match.venue;
+                    if (match.city) v += (match.venue ? ', ' : '') + match.city;
+                    parts.push(v);
+                }
+                metaHtml = `<div class="match-meta" style="margin-bottom:0.3rem;">${parts.join(' | ')}</div>`;
+            }
+            
             html += `
                 <div class="knockout-match">
                     <span class="match-label">M${key}</span>
                     <div class="knockout-team right">
-                        ${match.home}${homeInitial ? ' <span class="draft-badge">'+homeInitial+'</span>' : ''}
+                        ${match.home || 'TBD'}${homeInitial ? ' <span class="draft-badge">'+homeInitial+'</span>' : ''}
                     </div>
                     <input type="number" min="0" class="score-input knockout-score" value="${match.homeScore}" onchange="updateKnockout('${key}','homeScore',this.value)">
                     <span class="vs">vs</span>
                     <input type="number" min="0" class="score-input knockout-score" value="${match.awayScore}" onchange="updateKnockout('${key}','awayScore',this.value)">
                     <div class="knockout-team">
-                        ${match.away}${awayInitial ? ' <span class="draft-badge">'+awayInitial+'</span>' : ''}
+                        ${match.away || 'TBD'}${awayInitial ? ' <span class="draft-badge">'+awayInitial+'</span>' : ''}
                     </div>
                 </div>
+                ${metaHtml}
             `;
         }
         div.innerHTML = html;
@@ -1079,13 +1257,91 @@ function updateKnockout(key, field, value) {
     } else {
         state.knockout[key][field] = value;
     }
-    saveData(); renderKnockout(); updateScores();
+    saveData(); renderKnockout(); renderBracket(); updateScores();
 }
 
 function resetKnockout() {
     if(!confirm('Clear all knockout results?')) return;
     state.knockout = {};
-    saveData(); renderKnockout(); updateScores();
+    saveData(); renderKnockout(); renderBracket(); updateScores();
+}
+
+// ===== BRACKET =====
+function renderBracket() {
+    const container = document.getElementById('bracketContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const rounds = [
+        {idx: 0, name: 'Round of 32', matches: 16},
+        {idx: 1, name: 'Round of 16', matches: 8},
+        {idx: 2, name: 'Quarterfinals', matches: 4},
+        {idx: 3, name: 'Semifinals', matches: 2},
+        {idx: 4, name: 'Final', matches: 1},
+        {idx: 5, name: '3rd Place', matches: 1}
+    ];
+    
+    rounds.forEach((r, roundPos) => {
+        const col = document.createElement('div');
+        col.className = 'bracket-round';
+        
+        const title = document.createElement('div');
+        title.className = 'bracket-round-title';
+        title.textContent = r.name;
+        col.appendChild(title);
+        
+        for (let m = 0; m < r.matches; m++) {
+            const key = `${r.idx}_${m}`;
+            const match = state.knockout[key] || {home:'',away:'',homeScore:'',awayScore:''};
+            
+            // Auto-populate from previous round winners if empty
+            if (!match.home && r.idx > 0) {
+                const prev = getPreviousWinners(r.idx, m);
+                if (prev.home) match.home = prev.home;
+                if (prev.away) match.away = prev.away;
+            }
+            
+            const homeInitial = getDrafterInitial(match.home);
+            const awayInitial = getDrafterInitial(match.away);
+            const winner = getWinner(match);
+            const isComplete = match.homeScore !== '' && match.awayScore !== '' && match.home && match.away;
+            
+            const card = document.createElement('div');
+            card.className = 'bracket-match' + (isComplete ? ' complete' : '');
+            
+            const metaParts = [];
+            if (match.date) metaParts.push(match.date);
+            if (match.time) metaParts.push(match.time);
+            if (match.venue) metaParts.push(match.venue);
+            if (match.city && !match.venue) metaParts.push(match.city);
+            
+            card.innerHTML = `
+                <div class="bracket-teams">
+                    <div class="bracket-team ${winner === match.home ? 'winner' : ''} ${!match.home ? 'empty' : ''}">
+                        <span>${match.home || 'TBD'}${homeInitial ? ' <span class="team-initial">('+homeInitial+')</span>' : ''}</span>
+                        <span class="bracket-score">${match.homeScore !== '' ? match.homeScore : '-'}</span>
+                    </div>
+                    <div class="bracket-team ${winner === match.away ? 'winner' : ''} ${!match.away ? 'empty' : ''}">
+                        <span>${match.away || 'TBD'}${awayInitial ? ' <span class="team-initial">('+awayInitial+')</span>' : ''}</span>
+                        <span class="bracket-score">${match.awayScore !== '' ? match.awayScore : '-'}</span>
+                    </div>
+                </div>
+                ${metaParts.length ? `<div class="bracket-meta">${metaParts.join(' | ')}</div>` : ''}
+            `;
+            
+            col.appendChild(card);
+        }
+        
+        container.appendChild(col);
+        
+        // Add connector arrow between rounds (except after last)
+        if (roundPos < rounds.length - 1) {
+            const arrow = document.createElement('div');
+            arrow.className = 'bracket-connector';
+            arrow.innerHTML = '›';
+            container.appendChild(arrow);
+        }
+    });
 }
 
 // ===== DRAFT =====
