@@ -611,7 +611,7 @@ const DEFAULT_CONFIG = {
     third: 7, finalist: 9, champion: 15
 };
 
-const STORAGE_KEY = 'wc2026_tracker_v9';
+const STORAGE_KEY = 'wc2026_tracker_v10';
 
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv';
 const SHEET_KNOCKOUT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv&sheet=Knockouts';
@@ -867,6 +867,7 @@ async function fetchKnockoutSheet() {
         if (rows.length < 2) throw new Error('Sheet appears empty');
         
         const headers = rows[0].map(h => h.toLowerCase().trim());
+        
         const colHome = findColumn(headers, ['home','home team','hometeam','team1','home_team']);
         const colAway = findColumn(headers, ['away','away team','awayteam','team2','away_team']);
         const colHomeScore = findColumn(headers, ['home score','homescore','hscore','score home','h','home_score']);
@@ -875,9 +876,10 @@ async function fetchKnockoutSheet() {
         const colTime = findColumn(headers, ['time','match time','kickoff','cdt','time cdt','kickoff cdt','match_time','matchtime','time (cdt)','kickoff (cdt)']);
         const colVenue = findColumn(headers, ['venue','stadium','ground','venue/stadium']);
         const colCity = findColumn(headers, ['city','location','host city','host_city','hostcity']);
-        const colRound = findColumn(headers, ['round','stage','knockout round','round of']);
+        const colRound = findColumn(headers, ['round','stage','knockout round','round of','group','knockout_group']);
         
-        if (colHome < 0 || colAway < 0 || colRound < 0) throw new Error('Could not find Home/Away/Round columns. Headers: ' + headers.join(', '));
+        if (colHome < 0 || colAway < 0) throw new Error('Could not find Home/Away columns. Headers: ' + headers.join(', '));
+        if (colRound < 0) throw new Error('Could not find Round/Group column. Headers: ' + headers.join(', '));
         
         const roundCounters = {};
         let updatedScores = 0, updatedMeta = 0;
@@ -885,12 +887,12 @@ async function fetchKnockoutSheet() {
         
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
-            if (!row || row.length < Math.max(colHome, colAway, colRound) + 1) continue;
+            if (!row || row.length < Math.max(colHome, colAway) + 1) continue;
             
             const home = normalizeName(row[colHome]);
             const away = normalizeName(row[colAway]);
-            const roundRaw = cleanName(row[colRound]);
-            if (!home || !away || !roundRaw) continue;
+            const roundRaw = colRound >= 0 ? cleanName(row[colRound]) : 'Round of 32';
+            if (!home || !away) continue;
             
             const roundIndex = mapRoundToIndex(roundRaw);
             if (roundIndex === null) { unmatched.push(`Row ${i+1}: unknown round "${roundRaw}"`); continue; }
@@ -1196,7 +1198,6 @@ function renderKnockout() {
             const homeInitial = getDrafterInitial(match.home);
             const awayInitial = getDrafterInitial(match.away);
             
-            // Match details from sheet if available
             let metaHtml = '';
             if (match.date || match.time || match.venue) {
                 const parts = [];
@@ -1294,7 +1295,6 @@ function renderBracket() {
             const key = `${r.idx}_${m}`;
             const match = state.knockout[key] || {home:'',away:'',homeScore:'',awayScore:''};
             
-            // Auto-populate from previous round winners if empty
             if (!match.home && r.idx > 0) {
                 const prev = getPreviousWinners(r.idx, m);
                 if (prev.home) match.home = prev.home;
@@ -1334,7 +1334,6 @@ function renderBracket() {
         
         container.appendChild(col);
         
-        // Add connector arrow between rounds (except after last)
         if (roundPos < rounds.length - 1) {
             const arrow = document.createElement('div');
             arrow.className = 'bracket-connector';
