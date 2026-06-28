@@ -161,10 +161,27 @@
             padding: 0.6rem;
             border-radius: 8px;
             margin-bottom: 0.5rem;
+            flex-wrap: wrap;
         }
         .knockout-team { flex: 1; font-size: 0.85rem; }
         .knockout-team.right { text-align: right; }
         .knockout-score { width: 40px; text-align: center; }
+        .penalty-label {
+            color: #ffd700;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin: 0 0.2rem;
+        }
+        .penalty-input {
+            width: 30px;
+            text-align: center;
+            background: #0a1628;
+            border: 1px solid #b8860b;
+            color: #ffd700;
+            border-radius: 4px;
+            padding: 0.2rem;
+            font-size: 0.8rem;
+        }
         .match-label { color: #6b8cae; font-size: 0.75rem; min-width: 60px; }
         .draft-badge {
             background: #111d2e;
@@ -175,6 +192,13 @@
             font-size: 0.7rem;
             font-weight: 700;
             margin-left: 0.3rem;
+        }
+        .penalty-row {
+            width: 100%;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #ffd700;
+            margin-top: 0.3rem;
         }
         
         .draft-grid {
@@ -349,7 +373,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-around;
-            min-width: 190px;
+            min-width: 200px;
             flex: 1;
         }
         .bracket-round-title {
@@ -401,6 +425,11 @@
             font-size: 0.95rem;
             min-width: 22px;
             text-align: right;
+        }
+        .bracket-pens {
+            color: #ffd700;
+            font-size: 0.75rem;
+            margin-left: 0.3rem;
         }
         .bracket-meta {
             font-size: 0.7rem;
@@ -482,7 +511,7 @@
 <!-- KNOCKOUT -->
 <div id="knockout" class="panel">
     <div class="info-box">
-        <strong>Knockout Stage</strong> — Enter scores below or sync from the Knockouts sheet tab. Winners auto-advance to the next round.
+        <strong>Knockout Stage</strong> — Enter match scores. If tied, add penalty shootout scores in the gold boxes. The penalty winner advances.
     </div>
     <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
@@ -497,7 +526,7 @@
 <div id="bracket" class="panel">
     <div class="info-box">
         <strong>Knockout Bracket</strong> — Left to right shows progression from Round of 32 through the Final.
-        <br>Green border = match complete. Gold initials = drafter.
+        <br>Green border = match complete. Gold initials = drafter. Penalty scores shown in gold.
     </div>
     <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
@@ -611,7 +640,7 @@ const DEFAULT_CONFIG = {
     third: 7, finalist: 9, champion: 15
 };
 
-const STORAGE_KEY = 'wc2026_tracker_v11';
+const STORAGE_KEY = 'wc2026_tracker_v12';
 
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv';
 
@@ -871,6 +900,8 @@ async function fetchKnockoutSheet() {
         const colAway = findColumn(headers, ['away','away team','awayteam','team2','away_team']);
         const colHomeScore = findColumn(headers, ['home score','homescore','hscore','score home','h','home_score']);
         const colAwayScore = findColumn(headers, ['away score','awayscore','ascore','score away','a','away_score']);
+        const colHomePen = findColumn(headers, ['home penalties','home pen','home_pen','pen home','penalties home','h pen']);
+        const colAwayPen = findColumn(headers, ['away penalties','away pen','away_pen','pen away','penalties away','a pen']);
         const colDate = findColumn(headers, ['date','match date','day','match_date','matchdate']);
         const colTime = findColumn(headers, ['time','match time','kickoff','cdt','time cdt','kickoff cdt','match_time','matchtime','time (cdt)','kickoff (cdt)']);
         const colVenue = findColumn(headers, ['venue','stadium','ground','venue/stadium']);
@@ -894,7 +925,7 @@ async function fetchKnockoutSheet() {
             if (!home || !away || !roundRaw) continue;
             
             const roundIndex = mapRoundToIndex(roundRaw);
-            if (roundIndex === null) continue; // Skip group stage rows silently
+            if (roundIndex === null) continue;
             
             if (roundCounters[roundIndex] === undefined) roundCounters[roundIndex] = 0;
             const matchIndex = roundCounters[roundIndex]++;
@@ -905,6 +936,11 @@ async function fetchKnockoutSheet() {
             const hScore = hScoreStr !== '' ? parseInt(hScoreStr) : NaN;
             const aScore = aScoreStr !== '' ? parseInt(aScoreStr) : NaN;
             
+            const hPenStr = colHomePen >= 0 ? cleanName(row[colHomePen]) : '';
+            const aPenStr = colAwayPen >= 0 ? cleanName(row[colAwayPen]) : '';
+            const hPen = hPenStr !== '' ? parseInt(hPenStr) : NaN;
+            const aPen = aPenStr !== '' ? parseInt(aPenStr) : NaN;
+            
             const existing = state.knockout[key] || {};
             const newMatch = {...existing, home, away};
             
@@ -912,6 +948,10 @@ async function fetchKnockoutSheet() {
                 newMatch.homeScore = hScore;
                 newMatch.awayScore = aScore;
                 updatedScores++;
+            }
+            if (!isNaN(hPen) && !isNaN(aPen)) {
+                newMatch.homePen = hPen;
+                newMatch.awayPen = aPen;
             }
             if (colDate >= 0 && row[colDate]) { newMatch.date = cleanName(row[colDate]); updatedMeta++; }
             if (colTime >= 0 && row[colTime]) { newMatch.time = cleanName(row[colTime]); updatedMeta++; }
@@ -1186,7 +1226,7 @@ function renderKnockout() {
         
         for (let mIdx = 0; mIdx < round.matches; mIdx++) {
             const key = `${rIdx}_${mIdx}`;
-            const match = state.knockout[key] || {home:'',away:'',homeScore:'',awayScore:''};
+            const match = state.knockout[key] || {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:''};
             
             if (!match.home && rIdx > 0) {
                 const prev = getPreviousWinners(rIdx, mIdx);
@@ -1196,6 +1236,7 @@ function renderKnockout() {
             
             const homeInitial = getDrafterInitial(match.home);
             const awayInitial = getDrafterInitial(match.away);
+            const isDraw = match.homeScore !== '' && match.awayScore !== '' && parseInt(match.homeScore) === parseInt(match.awayScore);
             
             let metaHtml = '';
             if (match.date || match.time || match.venue) {
@@ -1224,8 +1265,20 @@ function renderKnockout() {
                         ${match.away || 'TBD'}${awayInitial ? ' <span class="draft-badge">'+awayInitial+'</span>' : ''}
                     </div>
                 </div>
-                ${metaHtml}
             `;
+            
+            if (isDraw) {
+                html += `
+                    <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin:-0.3rem 0 0.5rem;">
+                        <span class="penalty-label">PENS</span>
+                        <input type="number" min="0" class="penalty-input" value="${match.homePen??''}" onchange="updateKnockout('${key}','homePen',this.value)" placeholder="H">
+                        <span class="vs">-</span>
+                        <input type="number" min="0" class="penalty-input" value="${match.awayPen??''}" onchange="updateKnockout('${key}','awayPen',this.value)" placeholder="A">
+                    </div>
+                `;
+            }
+            
+            html += metaHtml;
         }
         div.innerHTML = html;
         container.appendChild(div);
@@ -1245,14 +1298,23 @@ function getPreviousWinners(rIdx, mIdx) {
 
 function getWinner(match) {
     if (!match || match.homeScore === '' || match.awayScore === '') return '';
-    if (parseInt(match.homeScore) > parseInt(match.awayScore)) return match.home;
-    if (parseInt(match.awayScore) > parseInt(match.homeScore)) return match.away;
-    return match.home;
+    const h = parseInt(match.homeScore);
+    const a = parseInt(match.awayScore);
+    if (h > a) return match.home;
+    if (a > h) return match.away;
+    // Tied after regular/extra time — check penalties
+    if (match.homePen !== '' && match.awayPen !== '' && match.homePen !== undefined && match.awayPen !== undefined) {
+        const hp = parseInt(match.homePen);
+        const ap = parseInt(match.awayPen);
+        if (hp > ap) return match.home;
+        if (ap > hp) return match.away;
+    }
+    return ''; // Still undecided
 }
 
 function updateKnockout(key, field, value) {
-    if (!state.knockout[key]) state.knockout[key] = {home:'',away:'',homeScore:'',awayScore:''};
-    if (field.includes('Score')) {
+    if (!state.knockout[key]) state.knockout[key] = {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:''};
+    if (field.includes('Score') || field.includes('Pen')) {
         state.knockout[key][field] = value === '' ? '' : parseInt(value);
     } else {
         state.knockout[key][field] = value;
@@ -1292,7 +1354,7 @@ function renderBracket() {
         
         for (let m = 0; m < r.matches; m++) {
             const key = `${r.idx}_${m}`;
-            const match = state.knockout[key] || {home:'',away:'',homeScore:'',awayScore:''};
+            const match = state.knockout[key] || {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:''};
             
             if (!match.home && r.idx > 0) {
                 const prev = getPreviousWinners(r.idx, m);
@@ -1303,7 +1365,8 @@ function renderBracket() {
             const homeInitial = getDrafterInitial(match.home);
             const awayInitial = getDrafterInitial(match.away);
             const winner = getWinner(match);
-            const isComplete = match.homeScore !== '' && match.awayScore !== '' && match.home && match.away;
+            const isComplete = winner !== '' && match.home && match.away;
+            const hasPens = match.homePen !== '' && match.awayPen !== '' && match.homePen !== undefined && match.awayPen !== undefined;
             
             const card = document.createElement('div');
             card.className = 'bracket-match' + (isComplete ? ' complete' : '');
@@ -1318,11 +1381,17 @@ function renderBracket() {
                 <div class="bracket-teams">
                     <div class="bracket-team ${winner === match.home ? 'winner' : ''} ${!match.home ? 'empty' : ''}">
                         <span>${match.home || 'TBD'}${homeInitial ? ' <span class="team-initial">('+homeInitial+')</span>' : ''}</span>
-                        <span class="bracket-score">${match.homeScore !== '' ? match.homeScore : '-'}</span>
+                        <span>
+                            <span class="bracket-score">${match.homeScore !== '' ? match.homeScore : '-'}</span>
+                            ${hasPens ? '<span class="bracket-pens">('+match.homePen+')</span>' : ''}
+                        </span>
                     </div>
                     <div class="bracket-team ${winner === match.away ? 'winner' : ''} ${!match.away ? 'empty' : ''}">
                         <span>${match.away || 'TBD'}${awayInitial ? ' <span class="team-initial">('+awayInitial+')</span>' : ''}</span>
-                        <span class="bracket-score">${match.awayScore !== '' ? match.awayScore : '-'}</span>
+                        <span>
+                            <span class="bracket-score">${match.awayScore !== '' ? match.awayScore : '-'}</span>
+                            ${hasPens ? '<span class="bracket-pens">('+match.awayPen+')</span>' : ''}
+                        </span>
                     </div>
                 </div>
                 ${metaParts.length ? `<div class="bracket-meta">${metaParts.join(' | ')}</div>` : ''}
@@ -1411,7 +1480,7 @@ function getTeamPoints(teamName) {
                 if (r === 1 && won) reached = 'r16';
                 if (r === 2 && won) reached = 'qf';
                 if (r === 3 && won) reached = 'sf';
-                if (r === 4) { reached = match.homeScore > match.awayScore ? 'champion' : 'finalist'; }
+                if (r === 4) { reached = getWinner(match) === teamName ? 'champion' : 'finalist'; }
                 if (r === 5) { reached = 'third'; }
             }
         }
