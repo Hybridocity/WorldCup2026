@@ -611,10 +611,9 @@ const DEFAULT_CONFIG = {
     third: 7, finalist: 9, champion: 15
 };
 
-const STORAGE_KEY = 'wc2026_tracker_v10';
+const STORAGE_KEY = 'wc2026_tracker_v11';
 
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv';
-const SHEET_KNOCKOUT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv&sheet=Knockouts';
 
 let state = {
     matches: {},
@@ -836,7 +835,7 @@ async function fetchGoogleSheet() {
         updateScores();
         let msg = `✅ Group stage synced! ${updatedScores} scores + ${updatedMeta} details.`;
         let type = 'success';
-        if (unmatched.length > 0) { msg += ` ⚠️ ${unmatched.length} unmatched.`; type = 'warn'; showDebug(unmatched.slice(0, 8)); console.log('Unmatched:', unmatched); }
+        if (unmatched.length > 0) { msg += ` ⚠️ ${unmatched.length} unmatched (knockout rows are expected).`; type = 'warn'; showDebug(unmatched.slice(0, 8)); console.log('Unmatched:', unmatched); }
         showFetch('fetchStatus', msg, type);
     } catch (e) {
         console.error(e);
@@ -860,7 +859,7 @@ async function fetchKnockoutSheet() {
     showFetch('knockoutFetchStatus', 'Syncing knockouts...', 'info');
     showFetch('bracketFetchStatus', 'Syncing knockouts...', 'info');
     try {
-        const res = await fetch(SHEET_KNOCKOUT_URL);
+        const res = await fetch(SHEET_CSV_URL);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const csv = await res.text();
         const rows = parseCSV(csv);
@@ -887,15 +886,15 @@ async function fetchKnockoutSheet() {
         
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
-            if (!row || row.length < Math.max(colHome, colAway) + 1) continue;
+            if (!row || row.length < Math.max(colHome, colAway, colRound) + 1) continue;
             
             const home = normalizeName(row[colHome]);
             const away = normalizeName(row[colAway]);
-            const roundRaw = colRound >= 0 ? cleanName(row[colRound]) : 'Round of 32';
-            if (!home || !away) continue;
+            const roundRaw = cleanName(row[colRound]);
+            if (!home || !away || !roundRaw) continue;
             
             const roundIndex = mapRoundToIndex(roundRaw);
-            if (roundIndex === null) { unmatched.push(`Row ${i+1}: unknown round "${roundRaw}"`); continue; }
+            if (roundIndex === null) continue; // Skip group stage rows silently
             
             if (roundCounters[roundIndex] === undefined) roundCounters[roundIndex] = 0;
             const matchIndex = roundCounters[roundIndex]++;
