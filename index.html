@@ -361,6 +361,7 @@
         }
         .debug-box strong { color: #ffd700; }
         
+        /* BRACKET STYLES */
         .bracket-container {
             display: flex;
             overflow-x: auto;
@@ -485,8 +486,8 @@
 <!-- GROUP STAGE -->
 <div id="groups" class="panel active">
     <div class="info-box">
-        <strong>Scoring:</strong> Win = <span id="dispWin">3</span> pts, Draw = <span id="dispDraw">1</span> pt.
-        <br>Letter in parentheses = drafter initial.
+        <strong>Scoring:</strong> Win = <span id="dispWin">3</span> pts, Draw = <span id="dispDraw">1</span> pt. Top 2 + 8 best 3rd-place teams advance.
+        <br>Letter in parentheses = drafter initial. Scores auto-sync from Google Sheet.
     </div>
     <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
@@ -510,7 +511,7 @@
 <!-- KNOCKOUT -->
 <div id="knockout" class="panel">
     <div class="info-box">
-        <strong>Knockout Stage</strong> — Official FIFA bracket. If tied after 90 mins, add penalty scores in gold boxes.
+        <strong>Knockout Stage</strong> — Enter match scores. If tied, add penalty shootout scores in the gold boxes. The penalty winner advances.
     </div>
     <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
@@ -524,8 +525,8 @@
 <!-- BRACKET -->
 <div id="bracket" class="panel">
     <div class="info-box">
-        <strong>Official FIFA Knockout Bracket</strong> — Correct crossovers per FIFA.com.
-        <br>Green border = complete. Gold = drafter initials.
+        <strong>Knockout Bracket</strong> — Left to right shows progression from Round of 32 through the Final.
+        <br>Green border = match complete. Gold initials = drafter. Penalty scores shown in gold.
     </div>
     <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         <button class="btn" onclick="saveData()">💾 Save Progress</button>
@@ -539,6 +540,7 @@
 <div id="draft" class="panel">
     <div class="info-box">
         <strong>Draft Rules:</strong> 4 players × 12 teams = all 48 teams drafted.
+        <br>Use <strong>Export/Import</strong> to sync across devices.
     </div>
     <div style="margin-bottom:1rem;">
         <button class="btn" onclick="saveData()">💾 Save Draft</button>
@@ -564,13 +566,13 @@
 <div id="settings" class="panel">
     <div class="card">
         <h2>⚙️ Scoring System</h2>
-        <p style="color:#a8c5e2;font-size:0.85rem;margin-bottom:0.8rem;">Change any value and it updates instantly.</p>
+        <p style="color:#a8c5e2;font-size:0.85rem;margin-bottom:0.8rem;">Change any value and it updates instantly across the whole site.</p>
         
         <h3 style="color:#ffd700;font-size:0.95rem;margin:1rem 0 0.5rem;">Group Stage</h3>
         <div class="setting-row"><label>Win</label><input type="number" id="cfgWin" value="3" onchange="updateConfig()"></div>
         <div class="setting-row"><label>Draw</label><input type="number" id="cfgDraw" value="1" onchange="updateConfig()"></div>
         
-        <h3 style="color:#ffd700;font-size:0.95rem;margin:1rem 0 0.5rem;">Knockout Bonuses</h3>
+        <h3 style="color:#ffd700;font-size:0.95rem;margin:1rem 0 0.5rem;">Knockout Bonuses (added to group pts)</h3>
         <div class="setting-row"><label>Round of 32</label><input type="number" id="cfgR32" value="3" onchange="updateConfig()"></div>
         <div class="setting-row"><label>Round of 16</label><input type="number" id="cfgR16" value="4" onchange="updateConfig()"></div>
         <div class="setting-row"><label>Quarterfinal</label><input type="number" id="cfgQF" value="5" onchange="updateConfig()"></div>
@@ -638,85 +640,9 @@ const DEFAULT_CONFIG = {
     third: 7, finalist: 9, champion: 15
 };
 
-const STORAGE_KEY = 'wc2026_tracker_v14';
+const STORAGE_KEY = 'wc2026_tracker_v12';
 
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQ1htQsinBLAC4Q1b2uefVucL6mxMezAABM4fK32-fG3ajyLcaNDCTvGNA_jxy0sKRey9tooOv_Kl0/pub?output=csv';
-
-// Official FIFA 2026 Round of 32 bracket (from FIFA.com)
-const DEFAULT_KNOCKOUT = {
-    '0_0': {home:'South Africa', away:'Canada', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jun 28',time:'15:00 CDT',venue:'SoFi Stadium',city:'Los Angeles'},
-    '0_1': {home:'Germany', away:'Paraguay', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jun 29',time:'12:00 CDT',venue:'Gillette Stadium',city:'Foxborough'},
-    '0_2': {home:'Netherlands', away:'Morocco', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jun 29',time:'15:00 CDT',venue:'Estadio Monterrey',city:'Monterrey'},
-    '0_3': {home:'Brazil', away:'Japan', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jun 29',time:'18:00 CDT',venue:'NRG Stadium',city:'Houston'},
-    '0_4': {home:'France', away:'Sweden', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jun 30',time:'12:00 CDT',venue:'MetLife Stadium',city:'East Rutherford'},
-    '0_5': {home:'Côte d\'Ivoire', away:'Norway', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jun 30',time:'15:00 CDT',venue:'AT&T Stadium',city:'Dallas'},
-    '0_6': {home:'Mexico', away:'Ecuador', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jun 30',time:'18:00 CDT',venue:'Estadio Azteca',city:'Mexico City'},
-    '0_7': {home:'England', away:'Congo DR', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 1',time:'12:00 CDT',venue:'Mercedes-Benz Stadium',city:'Atlanta'},
-    '0_8': {home:'United States', away:'Bosnia and Herzegovina', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 1',time:'15:00 CDT',venue:'Levi\'s Stadium',city:'Santa Clara'},
-    '0_9': {home:'Belgium', away:'Senegal', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 1',time:'18:00 CDT',venue:'Lumen Field',city:'Seattle'},
-    '0_10': {home:'Portugal', away:'Croatia', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 2',time:'12:00 CDT',venue:'BMO Field',city:'Toronto'},
-    '0_11': {home:'Spain', away:'Austria', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 2',time:'15:00 CDT',venue:'SoFi Stadium',city:'Los Angeles'},
-    '0_12': {home:'Switzerland', away:'Algeria', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 2',time:'18:00 CDT',venue:'BC Place',city:'Vancouver'},
-    '0_13': {home:'Argentina', away:'Cabo Verde', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 3',time:'12:00 CDT',venue:'Hard Rock Stadium',city:'Miami'},
-    '0_14': {home:'Colombia', away:'Ghana', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 3',time:'15:00 CDT',venue:'Arrowhead Stadium',city:'Kansas City'},
-    '0_15': {home:'Australia', away:'Egypt', homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 3',time:'18:00 CDT',venue:'AT&T Stadium',city:'Dallas'},
-    // Round of 16 (empty, auto-populated)
-    '1_0': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 4',time:'21:00 CDT'},
-    '1_1': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 4',time:'17:00 CDT'},
-    '1_2': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 5',time:'20:00 CDT'},
-    '1_3': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 6',time:'00:00 CDT'},
-    '1_4': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 6',time:'19:00 CDT'},
-    '1_5': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 7',time:'00:00 CDT'},
-    '1_6': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 7',time:'16:00 CDT'},
-    '1_7': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 7',time:'20:00 CDT'},
-    // Quarterfinals
-    '2_0': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 9',time:'20:00 CDT'},
-    '2_1': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 10',time:'15:00 CDT'},
-    '2_2': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 9',time:'16:00 CDT'},
-    '2_3': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 10',time:'19:00 CDT'},
-    // Semifinals
-    '3_0': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 14',time:'15:00 CDT'},
-    '3_1': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 15',time:'15:00 CDT'},
-    // Final & 3rd Place
-    '4_0': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 19',time:'15:00 CDT'},
-    '5_0': {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:'',date:'Jul 18',time:'15:00 CDT'}
-};
-
-// FIFA match number mapping
-const FIFA_NUM = {
-    '0_0':'73','0_1':'74','0_2':'75','0_3':'76','0_4':'77','0_5':'78','0_6':'79','0_7':'80',
-    '0_8':'81','0_9':'82','0_10':'83','0_11':'84','0_12':'85','0_13':'86','0_14':'87','0_15':'88',
-    '1_0':'89','1_1':'90','1_2':'91','1_3':'92','1_4':'93','1_5':'94','1_6':'95','1_7':'96',
-    '2_0':'97','2_1':'98','2_2':'99','2_3':'100',
-    '3_0':'101','3_1':'102',
-    '4_0':'104','5_0':'103'
-};
-
-// OFFICIAL FIFA BRACKET TREE (from FIFA.com)
-// Maps each round/index to the TWO previous matches that feed into it
-const BRACKET_TREE = {
-    // Round of 16
-    '1_0': ['0_1','0_4'],   // M89 = W74 vs W77
-    '1_1': ['0_0','0_2'],   // M90 = W73 vs W75
-    '1_2': ['0_3','0_5'],   // M91 = W76 vs W78
-    '1_3': ['0_6','0_7'],   // M92 = W79 vs W80
-    '1_4': ['0_10','0_11'], // M93 = W83 vs W84
-    '1_5': ['0_8','0_9'],   // M94 = W81 vs W82
-    '1_6': ['0_13','0_15'], // M95 = W86 vs W88
-    '1_7': ['0_12','0_14'], // M96 = W85 vs W87
-    // Quarterfinals
-    '2_0': ['1_0','1_1'],   // M97 = W89 vs W90
-    '2_1': ['1_4','1_5'],   // M98 = W93 vs W94
-    '2_2': ['1_2','1_3'],   // M99 = W91 vs W92
-    '2_3': ['1_6','1_7'],   // M100 = W95 vs W96
-    // Semifinals
-    '3_0': ['2_0','2_1'],   // M101 = W97 vs W98
-    '3_1': ['2_2','2_3'],   // M102 = W99 vs W100
-    // Final
-    '4_0': ['3_0','3_1'],   // M104 = W101 vs W102
-    // 3rd Place
-    '5_0': ['3_0','3_1']    // M103 = L101 vs L102
-};
 
 let state = {
     matches: {},
@@ -757,9 +683,7 @@ const NAME_MAP = {
     'New Zeeland': 'New Zealand',
     'Czeckia': 'Czechia',
     'Czeck Republic': 'Czechia',
-    'Domincan Republic': 'Dominican Republic',
-    'Bosnia/Herzegovina': 'Bosnia and Herzegovina',
-    'Bosnia Herz.': 'Bosnia and Herzegovina'
+    'Domincan Republic': 'Dominican Republic'
 };
 
 function cleanName(name) {
@@ -792,12 +716,6 @@ function init() {
     document.getElementById('importModal').style.display = 'none';
     
     loadData();
-    
-    if (Object.keys(state.knockout).length === 0) {
-        state.knockout = JSON.parse(JSON.stringify(DEFAULT_KNOCKOUT));
-        saveData();
-    }
-    
     renderConfig();
     renderGroups();
     renderKnockout();
@@ -847,6 +765,7 @@ function parseCSV(text) {
     return rows;
 }
 
+// ===== COLUMN FINDER =====
 function findColumn(headers, names) {
     for (let n of names) {
         const idx = headers.indexOf(n.toLowerCase().trim());
@@ -861,6 +780,7 @@ function findColumn(headers, names) {
     return -1;
 }
 
+// ===== STATUS HELPERS =====
 function showFetch(elId, msg, type) {
     const el = document.getElementById(elId);
     el.textContent = msg;
@@ -944,7 +864,7 @@ async function fetchGoogleSheet() {
         updateScores();
         let msg = `✅ Group stage synced! ${updatedScores} scores + ${updatedMeta} details.`;
         let type = 'success';
-        if (unmatched.length > 0) { msg += ` ⚠️ ${unmatched.length} unmatched (knockout rows expected).`; type = 'warn'; showDebug(unmatched.slice(0, 8)); console.log('Unmatched:', unmatched); }
+        if (unmatched.length > 0) { msg += ` ⚠️ ${unmatched.length} unmatched (knockout rows are expected).`; type = 'warn'; showDebug(unmatched.slice(0, 8)); console.log('Unmatched:', unmatched); }
         showFetch('fetchStatus', msg, type);
     } catch (e) {
         console.error(e);
@@ -961,16 +881,6 @@ function mapRoundToIndex(roundName) {
     if (r.includes('semi') || r === 'sf') return 3;
     if (r.includes('final') && !r.includes('3rd') && !r.includes('third')) return 4;
     if (r.includes('3rd') || r.includes('third')) return 5;
-    return null;
-}
-
-function findKnockoutSlot(home, away) {
-    for (let key in state.knockout) {
-        const m = state.knockout[key];
-        if ((m.home === home && m.away === away) || (m.home === away && m.away === home)) {
-            return key;
-        }
-    }
     return null;
 }
 
@@ -999,27 +909,27 @@ async function fetchKnockoutSheet() {
         const colRound = findColumn(headers, ['round','stage','knockout round','round of','group','knockout_group']);
         
         if (colHome < 0 || colAway < 0) throw new Error('Could not find Home/Away columns. Headers: ' + headers.join(', '));
+        if (colRound < 0) throw new Error('Could not find Round/Group column. Headers: ' + headers.join(', '));
         
+        const roundCounters = {};
         let updatedScores = 0, updatedMeta = 0;
         const unmatched = [];
         
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
-            if (!row || row.length < Math.max(colHome, colAway) + 1) continue;
+            if (!row || row.length < Math.max(colHome, colAway, colRound) + 1) continue;
             
             const home = normalizeName(row[colHome]);
             const away = normalizeName(row[colAway]);
-            const roundRaw = colRound >= 0 ? cleanName(row[colRound]) : '';
-            if (!home || !away) continue;
+            const roundRaw = cleanName(row[colRound]);
+            if (!home || !away || !roundRaw) continue;
             
             const roundIndex = mapRoundToIndex(roundRaw);
             if (roundIndex === null) continue;
             
-            const key = findKnockoutSlot(home, away);
-            if (!key) {
-                unmatched.push(`Row ${i+1}: "${home}" vs "${away}" — no matching bracket slot`);
-                continue;
-            }
+            if (roundCounters[roundIndex] === undefined) roundCounters[roundIndex] = 0;
+            const matchIndex = roundCounters[roundIndex]++;
+            const key = `${roundIndex}_${matchIndex}`;
             
             const hScoreStr = colHomeScore >= 0 ? cleanName(row[colHomeScore]) : '';
             const aScoreStr = colAwayScore >= 0 ? cleanName(row[colAwayScore]) : '';
@@ -1058,7 +968,7 @@ async function fetchKnockoutSheet() {
         
         let msg = `✅ Knockouts synced! ${updatedScores} scores + ${updatedMeta} details.`;
         let type = 'success';
-        if (unmatched.length > 0) { msg += ` ⚠️ ${unmatched.length} row(s) not matched.`; type = 'warn'; console.log('Knockout issues:', unmatched); }
+        if (unmatched.length > 0) { msg += ` ⚠️ ${unmatched.length} issue(s).`; type = 'warn'; console.log('Knockout issues:', unmatched); }
         showFetch('knockoutFetchStatus', msg, type);
         showFetch('bracketFetchStatus', msg, type);
     } catch (e) {
@@ -1305,50 +1215,6 @@ const KNOCKOUT_ROUNDS = [
     {name:'3rd Place',matches:1}
 ];
 
-function getWinner(match) {
-    if (!match || match.homeScore === '' || match.awayScore === '') return '';
-    const h = parseInt(match.homeScore);
-    const a = parseInt(match.awayScore);
-    if (h > a) return match.home;
-    if (a > h) return match.away;
-    if (match.homePen !== '' && match.awayPen !== '' && match.homePen !== undefined && match.awayPen !== undefined) {
-        const hp = parseInt(match.homePen);
-        const ap = parseInt(match.awayPen);
-        if (hp > ap) return match.home;
-        if (ap > hp) return match.away;
-    }
-    return '';
-}
-
-function getLoser(match) {
-    if (!match || match.homeScore === '' || match.awayScore === '') return '';
-    const winner = getWinner(match);
-    if (!winner) return '';
-    return winner === match.home ? match.away : match.home;
-}
-
-function getPreviousWinners(rIdx, mIdx) {
-    const key = `${rIdx}_${mIdx}`;
-    const tree = BRACKET_TREE[key];
-    if (!tree) return {};
-    
-    const res1 = state.knockout[tree[0]];
-    const res2 = state.knockout[tree[1]];
-    
-    // 3rd place match gets losers of semifinals
-    if (rIdx === 5) {
-        return {
-            home: res1 ? getLoser(res1) : '',
-            away: res2 ? getLoser(res2) : ''
-        };
-    }
-    
-    return {
-        home: res1 ? getWinner(res1) : '',
-        away: res2 ? getWinner(res2) : ''
-    };
-}
-
 function renderKnockout() {
     const container = document.getElementById('knockoutContainer');
     container.innerHTML = '';
@@ -1371,7 +1237,6 @@ function renderKnockout() {
             const homeInitial = getDrafterInitial(match.home);
             const awayInitial = getDrafterInitial(match.away);
             const isDraw = match.homeScore !== '' && match.awayScore !== '' && parseInt(match.homeScore) === parseInt(match.awayScore);
-            const fifaNum = FIFA_NUM[key] || key;
             
             let metaHtml = '';
             if (match.date || match.time || match.venue) {
@@ -1389,7 +1254,7 @@ function renderKnockout() {
             
             html += `
                 <div class="knockout-match">
-                    <span class="match-label">M${fifaNum}</span>
+                    <span class="match-label">M${key}</span>
                     <div class="knockout-team right">
                         ${match.home || 'TBD'}${homeInitial ? ' <span class="draft-badge">'+homeInitial+'</span>' : ''}
                     </div>
@@ -1420,6 +1285,33 @@ function renderKnockout() {
     });
 }
 
+function getPreviousWinners(rIdx, mIdx) {
+    if (rIdx === 0) return {};
+    const prevRound = rIdx - 1;
+    const res1 = state.knockout[`${prevRound}_${mIdx*2}`];
+    const res2 = state.knockout[`${prevRound}_${mIdx*2+1}`];
+    return {
+        home: res1 ? getWinner(res1) : '',
+        away: res2 ? getWinner(res2) : ''
+    };
+}
+
+function getWinner(match) {
+    if (!match || match.homeScore === '' || match.awayScore === '') return '';
+    const h = parseInt(match.homeScore);
+    const a = parseInt(match.awayScore);
+    if (h > a) return match.home;
+    if (a > h) return match.away;
+    // Tied after regular/extra time — check penalties
+    if (match.homePen !== '' && match.awayPen !== '' && match.homePen !== undefined && match.awayPen !== undefined) {
+        const hp = parseInt(match.homePen);
+        const ap = parseInt(match.awayPen);
+        if (hp > ap) return match.home;
+        if (ap > hp) return match.away;
+    }
+    return ''; // Still undecided
+}
+
 function updateKnockout(key, field, value) {
     if (!state.knockout[key]) state.knockout[key] = {home:'',away:'',homeScore:'',awayScore:'',homePen:'',awayPen:''};
     if (field.includes('Score') || field.includes('Pen')) {
@@ -1431,8 +1323,8 @@ function updateKnockout(key, field, value) {
 }
 
 function resetKnockout() {
-    if(!confirm('Reset to official FIFA bracket? This will clear all scores.')) return;
-    state.knockout = JSON.parse(JSON.stringify(DEFAULT_KNOCKOUT));
+    if(!confirm('Clear all knockout results?')) return;
+    state.knockout = {};
     saveData(); renderKnockout(); renderBracket(); updateScores();
 }
 
@@ -1475,7 +1367,6 @@ function renderBracket() {
             const winner = getWinner(match);
             const isComplete = winner !== '' && match.home && match.away;
             const hasPens = match.homePen !== '' && match.awayPen !== '' && match.homePen !== undefined && match.awayPen !== undefined;
-            const fifaNum = FIFA_NUM[key] || key;
             
             const card = document.createElement('div');
             card.className = 'bracket-match' + (isComplete ? ' complete' : '');
@@ -1487,7 +1378,6 @@ function renderBracket() {
             if (match.city && !match.venue) metaParts.push(match.city);
             
             card.innerHTML = `
-                <div style="font-size:0.7rem;color:#6b8cae;text-align:center;margin-bottom:0.3rem;">M${fifaNum}</div>
                 <div class="bracket-teams">
                     <div class="bracket-team ${winner === match.home ? 'winner' : ''} ${!match.home ? 'empty' : ''}">
                         <span>${match.home || 'TBD'}${homeInitial ? ' <span class="team-initial">('+homeInitial+')</span>' : ''}</span>
